@@ -26,9 +26,10 @@ export default function HomePage() {
 
   return (
     <HomeInteraction onActivate={handleBegin}>
-      {/* ============ 桌面端 ≥1024px：固定的半露唱片 ============ */}
-      {/* 圆心钉在视口右缘（translateX 50%）→ 完整左半圆露出；垂直居中且直径 ≤96vh → 上下不裁切 */}
-      <div className="fixed right-0 top-1/2 z-0 hidden h-[min(96vh,60vw)] w-[min(96vh,60vw)] -translate-y-1/2 translate-x-1/2 lg:block">
+      {/* ============ 桌面端 ≥1024px：大半张露出的唱片 ============ */}
+      {/* 圆心在视口内、仅右侧约 30% 滑出屏幕 → 露出大半张完整圆盘（含圆润的右下弧）；
+          直径 ≤92vh 且垂直居中 → 上下不裁切，唯一的"切面"是视口右缘 */}
+      <div className="fixed right-0 top-1/2 z-0 hidden h-[min(92vh,52vw)] w-[min(92vh,52vw)] -translate-y-1/2 translate-x-[30%] lg:block">
         <motion.div
           initial={{ x: "70%" }}
           animate={{ x: 0 }}
@@ -40,7 +41,7 @@ export default function HomePage() {
       </div>
 
       {/* ============ 桌面端 ≥1024px：左侧文案 ============ */}
-      <div className="relative z-10 hidden min-h-[calc(100vh-180px)] max-w-[min(600px,48vw)] flex-col justify-center lg:flex">
+      <div className="relative z-10 hidden min-h-[calc(100vh-180px)] max-w-[min(580px,46vw)] flex-col justify-center lg:flex">
         <motion.h1
           {...fadeUp(0)}
           className="font-black tracking-[-0.02em] text-mt-fg"
