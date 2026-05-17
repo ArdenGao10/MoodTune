@@ -27,13 +27,17 @@ export async function GET(req: Request) {
     );
   }
 
-  // 当前 host 与回调 host 不一致 → 先把浏览器拉到回调 host 上重来
+  // 浏览器当前 host 与回调 host 不一致 → 先把浏览器拉到回调 host 上重来。
+  // 用 Host 请求头判断（地址栏真实 host）—— req.url 的 host 在 dev 下不可靠，
+  // 跟随重定向后浏览器会带上新 host，因此不会死循环。
   const callbackUrl = new URL(getRedirectUri());
-  const reqUrl = new URL(req.url);
-  if (reqUrl.host !== callbackUrl.host) {
-    reqUrl.protocol = callbackUrl.protocol;
-    reqUrl.host = callbackUrl.host;
-    return NextResponse.redirect(reqUrl);
+  const host = req.headers.get("host");
+  if (host && host !== callbackUrl.host) {
+    const target = new URL(
+      "/api/auth/spotify/login",
+      `${callbackUrl.protocol}//${callbackUrl.host}`,
+    );
+    return NextResponse.redirect(target);
   }
 
   const { url, verifier, state } = await getAuthUrl();
