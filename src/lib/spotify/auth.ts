@@ -180,8 +180,18 @@ async function requestToken(
     body,
   });
   if (!res.ok) {
+    // Spotify 错误体形如 { "error": "invalid_grant", "error_description": "…" }
     const detail = await res.text().catch(() => "");
-    throw new Error(`Spotify token endpoint ${res.status}: ${detail}`);
+    let code = `http_${res.status}`;
+    try {
+      const json = JSON.parse(detail) as { error?: string };
+      if (json.error) code = json.error;
+    } catch {
+      /* 非 JSON —— 保留 http_<status> */
+    }
+    console.error(`spotify token endpoint ${res.status}:`, detail);
+    // message 即 Spotify 的错误码，便于回调把它编进 URL
+    throw new Error(code);
   }
   return (await res.json()) as SpotifyTokenResponse;
 }

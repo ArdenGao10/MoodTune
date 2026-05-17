@@ -3,8 +3,8 @@
  * 校验 state（CSRF）、用 code + PKCE verifier 换 token，
  * 把 access / refresh 写入 httpOnly cookie，再跳回首页。
  *
- * 跳回首页时带 ?spotify=connected|denied|error 查询参数，方便临时测试
- * 按钮显示结果（下一阶段的 UI 会正式处理这些状态）。
+ * 跳回首页时带 ?spotify=connected|denied|error，失败时再带 &reason=...
+ * 把具体失败原因直接编进 URL，方便定位（详细错误另见 dev server 终端）。
  */
 
 import { NextResponse } from "next/server";
@@ -19,22 +19,26 @@ import {
 export const runtime = "nodejs";
 
 export async function GET(req: Request) {
-  const { searchParams, origin } = new URL(req.url);
+  const reqUrl = new URL(req.url);
+  const { searchParams } = reqUrl;
+  // 用 Host 头构造跳转目标 —— req.url 的 host 在 dev 下不可靠
+  const host = req.headers.get("host") ?? reqUrl.host;
+  const origin = `${reqUrl.protocol}//${host}`;
+
   const code = searchParams.get("code");
   const returnedState = searchParams.get("state");
   const oauthError = searchParams.get("error");
 
-  function homeWith(status: string): URL {
+  /** 跳回首页；失败时清掉 PKCE 临时 cookie 并带上 reason */
+  function redirectHome(status: string, reason?: string): NextResponse {
     const url = new URL("/", origin);
     url.searchParams.set("spotify", status);
-    return url;
-  }
-
-  /** 失败时：跳回首页并清掉 PKCE 临时 cookie */
-  function fail(status: string): NextResponse {
-    const res = NextResponse.redirect(homeWith(status));
-    res.cookies.delete(SP_COOKIE.verifier);
-    res.cookies.delete(SP_COOKIE.state);
+    if (reason) url.searchParams.set("reason", reason);
+    const res = NextResponse.redirect(url);
+    if (status !== "connected") {
+      res.cookies.delete(SP_COOKIE.verifier);
+      res.cookies.delete(SP_COOKIE.state);
+    }
     return res;
   }
 
@@ -42,32 +46,35 @@ export async function GET(req: Request) {
   const verifier = store.get(SP_COOKIE.verifier)?.value;
   const savedState = store.get(SP_COOKIE.state)?.value;
 
+  console.log(
+    `spotify callback: host=${host} hasCode=${Boolean(code)} ` +
+      `hasVerifier=${Boolean(verifier)} hasState=${Boolean(savedState)}`,
+  );
+
   if (oauthError) {
     console.warn("spotify callback: authorization denied —", oauthError);
-    return fail("denied");
+    return redirectHome("denied");
   }
   if (!code || !returnedState) {
-    console.error("spotify callback: missing code or state in query");
-    return fail("error");
+    console.error("spotify callback: missing code/state in query");
+    return redirectHome("error", "missing_params");
   }
   if (!verifier || !savedState) {
-    // 最常见原因：登录与回调的 host 不一致（localhost vs 127.0.0.1），
-    // 导致 PKCE 临时 cookie 跨域读不到。
+    // 登录与回调跑在了不同 host（localhost vs 127.0.0.1），PKCE cookie 跨域丢失
     console.error(
-      "spotify callback: PKCE cookies missing — likely a host mismatch " +
-        "between login and callback (use 127.0.0.1 consistently). " +
-        `verifier=${Boolean(verifier)} state=${Boolean(savedState)}`,
+      "spotify callback: PKCE cookies missing — login and callback ran on " +
+        "different hosts; use 127.0.0.1 consistently",
     );
-    return fail("error");
+    return redirectHome("error", "no_cookies");
   }
   if (returnedState !== savedState) {
     console.error("spotify callback: state mismatch (possible CSRF)");
-    return fail("error");
+    return redirectHome("error", "state_mismatch");
   }
 
   try {
     const token = await exchangeCodeForToken(code, verifier);
-    const res = NextResponse.redirect(homeWith("connected"));
+    const res = redirectHome("connected");
     res.cookies.set(
       SP_COOKIE.access,
       token.access_token,
@@ -85,7 +92,9 @@ export async function GET(req: Request) {
     res.cookies.delete(SP_COOKIE.state);
     return res;
   } catch (error) {
-    console.error("spotify: token exchange failed", error);
-    return fail("error");
+    // error.message 即 Spotify 的错误码（见 auth.ts requestToken）
+    const detail = error instanceof Error ? error.message : "unknown";
+    console.error("spotify callback: token exchange failed —", detail);
+    return redirectHome("error", `token_${detail}`);
   }
 }
