@@ -2,8 +2,8 @@
 
 /*
  * / —— Home：封面页。
- * 桌面：左侧文案 + 右侧完整左半圆唱片（圆心钉在视口右缘，垂直居中，上下不裁切）。
- * 移动：文案在上，唱片在下，aspect-square 强制正圆、底部略切。
+ * 桌面：左上文案 + 右下角"四分之三压角"的大唱片 → 对角线构图。
+ * 移动：文案在上，完整正圆唱片在下方居中（不裁切）。
  * 点击页面任意位置跳转 /mood-input。品牌名 MOODTUNE 见顶栏。
  */
 
@@ -26,13 +26,13 @@ export default function HomePage() {
 
   return (
     <HomeInteraction onActivate={handleBegin}>
-      {/* ============ 桌面端 ≥1024px：大半张露出的唱片 ============ */}
-      {/* 圆心在视口内、仅右侧约 30% 滑出屏幕 → 露出大半张完整圆盘（含圆润的右下弧）；
-          直径 ≤92vh 且垂直居中 → 上下不裁切，唯一的"切面"是视口右缘 */}
-      <div className="fixed right-0 top-1/2 z-0 hidden h-[min(92vh,52vw)] w-[min(92vh,52vw)] -translate-y-1/2 translate-x-[30%] lg:block">
+      {/* ============ 桌面端 ≥1024px：右下角压角的大唱片 ============ */}
+      {/* 圆心钉在视口右下角外侧（translate 35%/40%）→ 露出左上约 3/4 圆，右/下被视口切掉。
+          z-[1] 低于顶栏状态区(z-10) → 不遮挡右上角状态信息。 */}
+      <div className="fixed bottom-0 right-0 z-[1] hidden h-[min(110vh,110vw)] w-[min(110vh,110vw)] translate-x-[35%] translate-y-[40%] lg:block">
         <motion.div
-          initial={{ x: "70%" }}
-          animate={{ x: 0 }}
+          initial={{ x: "24%", y: "24%", opacity: 0 }}
+          animate={{ x: 0, y: 0, opacity: 1 }}
           transition={{ duration: 0.8, ease: "easeOut" }}
           className="h-full w-full"
         >
@@ -40,12 +40,12 @@ export default function HomePage() {
         </motion.div>
       </div>
 
-      {/* ============ 桌面端 ≥1024px：左侧文案 ============ */}
-      <div className="relative z-10 hidden min-h-[calc(100vh-180px)] max-w-[min(580px,46vw)] flex-col justify-center lg:flex">
+      {/* ============ 桌面端 ≥1024px：左上文案 ============ */}
+      <div className="relative z-10 hidden min-h-[calc(100vh-180px)] max-w-[60vw] flex-col justify-start pt-[3vh] lg:flex">
         <motion.h1
           {...fadeUp(0)}
           className="font-black tracking-[-0.02em] text-mt-fg"
-          style={{ fontSize: "clamp(40px, 5.4vw, 88px)", lineHeight: 0.92 }}
+          style={{ fontSize: "clamp(48px, 6.6vw, 116px)", lineHeight: 0.92 }}
         >
           Tonight,
           <br />
@@ -61,7 +61,7 @@ export default function HomePage() {
 
         <motion.p
           {...fadeUp(0.15)}
-          className="mt-9 text-[17px] leading-[1.6] text-mt-muted"
+          className="mt-9 max-w-[460px] text-[17px] leading-[1.6] text-mt-muted"
         >
           An AI DJ that picks songs for your every weather, every feeling,
           every late night. — Curated for those who outgrew Top 50.
@@ -75,7 +75,7 @@ export default function HomePage() {
         </motion.p>
       </div>
 
-      {/* ============ < 1024px：纵向堆叠，唱片在下、保持正圆 ============ */}
+      {/* ============ < 1024px：纵向堆叠，唱片在下、完整正圆 ============ */}
       <div className="flex min-h-[calc(100vh-200px)] flex-col items-center justify-center gap-9 lg:hidden">
         {/* 文案 */}
         <div className="flex flex-col items-center px-2 text-center">
@@ -109,20 +109,15 @@ export default function HomePage() {
           </motion.p>
         </div>
 
-        {/* 唱片：aspect-square 容器强制正圆，外框略矮 → 底部稍切 */}
-        <div
-          className="relative overflow-hidden"
-          style={{ width: "min(86vw, 420px)", height: "min(63vw, 308px)" }}
+        {/* 唱片：完整正圆，aspect-square 由 Vinyl 自身保证，不裁切 */}
+        <motion.div
+          initial={{ y: 36, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+          style={{ width: "min(86vw, 420px)" }}
         >
-          <motion.div
-            initial={{ y: 36, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
-            className="w-full"
-          >
-            <Vinyl isPlaying />
-          </motion.div>
-        </div>
+          <Vinyl isPlaying />
+        </motion.div>
       </div>
     </HomeInteraction>
   );
