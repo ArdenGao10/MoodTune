@@ -1,18 +1,24 @@
 /*
- * POST /api/recommend —— 调用智谱 GLM（OpenAI 兼容模式）生成 4 首歌曲推荐。
+ * POST /api/recommend —— 调用智谱 GLM（OpenAI 兼容模式）生成 3 首歌曲推荐。
  *  - 无图片：走文本模型 glm-5.1；有图片：走视觉模型 glm-4.5v。
  *  - 关闭思考模式（enable_thinking: false）—— 推歌场景无需推理过程。
  *  - JSON 输出鲁棒解析（兼容 markdown fences），失败重试一次。
+ *  - 已登录（cookie 有有效 Spotify token）时，额外把 3 首推荐匹配到
+ *    Spotify，返回统一 Track[]（Real Mode 用）；未登录则只返回原始
+ *    recommendations（既有 Demo 流程仍可用）。
  */
 
 import { NextResponse } from "next/server";
 import type OpenAI from "openai";
 import { MODELS, parseJsonRobust, zhipu } from "@/lib/zhipu";
 import { DJ_SYSTEM_PROMPT, buildUserText } from "@/lib/dj-prompt";
+import { getCurrentToken } from "@/lib/spotify/auth";
+import { matchRecommendationsToTracks } from "@/lib/spotify/match";
 import type {
   Recommendation,
   RecommendRequest,
   RecommendResponse,
+  Track,
 } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -69,7 +75,7 @@ export async function POST(
     if (!parsed.recommendations?.length) {
       throw new Error("Empty recommendations");
     }
-    return parsed.recommendations.slice(0, 4);
+    return parsed.recommendations.slice(0, 3);
   }
 
   try {
@@ -81,7 +87,20 @@ export async function POST(
       console.warn("recommend: first attempt failed, retrying", firstError);
       recommendations = await callZhipu();
     }
-    return NextResponse.json({ recommendations });
+
+    // 已登录 → 匹配 Spotify，附带统一 Track[]（Real Mode）
+    let tracks: Track[] | undefined;
+    try {
+      const token = await getCurrentToken();
+      if (token) {
+        tracks = await matchRecommendationsToTracks(recommendations);
+      }
+    } catch (matchError) {
+      // 匹配失败不影响主流程 —— 仍返回原始 recommendations
+      console.warn("recommend: spotify matching failed", matchError);
+    }
+
+    return NextResponse.json({ recommendations, tracks });
   } catch (error) {
     console.error("recommend: failed after retry", error);
     return NextResponse.json({ error: DJ_ERROR }, { status: 502 });

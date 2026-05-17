@@ -34,7 +34,9 @@ Rules:
 }
 6. Avoid songs with >50M Spotify streams unless they're undeniable taste markers.
 7. Lean toward album cuts, B-sides, and lesser-known tracks from established artists.
-Return exactly 4 songs.`;
+8. Use accurate, searchable song titles and artist names — they will be matched
+   against Spotify, so avoid nicknames or paraphrased titles.
+Return exactly 3 songs.`;
 
 /**
  * 把所有非空的情绪输入拼成一段自然语言，附上天气 / 时间作为 context。
@@ -75,6 +77,6 @@ export function buildUserText(req: RecommendRequest): string {
     lines.push("", `Context: ${ctx.join(" ")}`);
   }
 
-  lines.push("", "Pick her 4 songs.");
+  lines.push("", "Pick her 3 songs.");
   return lines.join("\n");
 }

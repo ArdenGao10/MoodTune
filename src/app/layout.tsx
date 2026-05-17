@@ -3,6 +3,7 @@ import { Inter, Caveat } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { WeatherProvider } from "@/components/weather-provider";
+import { MusicSourceProvider } from "@/contexts/MusicSourceContext";
 import { MoodSessionProvider } from "@/components/mood-session-provider";
 import { TopBar } from "@/components/layout/top-bar";
 
@@ -45,6 +46,7 @@ export default function RootLayout({
       <body className="min-h-full">
         <ThemeProvider>
           <WeatherProvider>
+            <MusicSourceProvider>
             <MoodSessionProvider>
               {/* 容器：手机 500px ｜ ≥768px 1600px */}
               <div className="mx-auto max-w-[500px] px-6 pb-20 pt-10 md:max-w-[1600px] md:px-20">
@@ -52,6 +54,7 @@ export default function RootLayout({
                 <main>{children}</main>
               </div>
             </MoodSessionProvider>
+            </MusicSourceProvider>
           </WeatherProvider>
         </ThemeProvider>
       </body>

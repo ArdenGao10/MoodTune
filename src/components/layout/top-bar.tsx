@@ -11,6 +11,7 @@ import { Plus } from "lucide-react";
 import { IconButton } from "../ui/IconButton";
 import { NowPlayingBadge } from "../now-playing-badge";
 import { ThemeToggle } from "../theme-toggle";
+import { SpotifyAuthButton } from "../spotify-auth-button";
 import { NavMenu } from "./nav-menu";
 import { WeatherWidget } from "./weather-widget";
 import { HomeStatus } from "./home-status";
@@ -34,6 +35,8 @@ export function TopBar() {
         {/* 右：状态区 + 主题切换 */}
         <div className="flex items-center gap-4">
           <HomeStatus />
+          {/* 临时：Spotify 登录测试按钮（阶段 1 验收用） */}
+          <SpotifyAuthButton />
           <ThemeToggle />
         </div>
       </header>
@@ -58,6 +61,8 @@ export function TopBar() {
 
       {/* 右 */}
       <div className="flex flex-1 items-center justify-end gap-3">
+        {/* 临时：Spotify 登录测试按钮（阶段 1 验收用） */}
+        <SpotifyAuthButton />
         <ThemeToggle />
         <NavMenu />
       </div>

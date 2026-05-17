@@ -39,8 +39,39 @@ export interface Recommendation {
   moodTag: string;
 }
 
+/**
+ * 应用内部统一的歌曲模型 —— 跨三种数据来源：
+ *  - 'mock'       Demo Mode 的预设歌曲
+ *  - 'spotify'    GLM 推荐已成功匹配到 Spotify
+ *  - 'unplayable' GLM 推荐在 Spotify 没找到，只能给外部搜索链接
+ * 上层 UI 只认这个类型，不关心数据从哪来。
+ */
+export interface Track {
+  /** 内部 ID */
+  id: string;
+  title: string;
+  artist: string;
+  /** 专辑封面 URL；为 null 时 UI 用 <BrandCover /> SVG 占位 */
+  albumArt: string | null;
+  source: "mock" | "spotify" | "unplayable";
+  /** source 为 'spotify' 时存在 —— 用于 Web Playback SDK */
+  spotifyUri?: string;
+  /** 30 秒试听片段，可能不存在 */
+  previewUrl?: string;
+  /** source 为 'unplayable' 时存在 —— 三个外部平台的搜索链接 */
+  externalSearchUrls?: {
+    youtubeMusic: string;
+    appleMusic: string;
+    spotifySearch: string;
+  };
+  /** DJ 的推荐语 */
+  djNote: string;
+}
+
 /** /api/recommend 的响应体 */
 export interface RecommendResponse {
   recommendations?: Recommendation[];
+  /** 已登录（Real Mode）时附带 —— GLM 推荐匹配 Spotify 后的统一 Track */
+  tracks?: Track[];
   error?: string;
 }

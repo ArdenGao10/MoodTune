@@ -159,16 +159,18 @@ function PlayerView({
 
   return (
     <div>
-      {/* 播放器 —— 桌面端用 flex + items-center：两列各自在 80vh 容器内
-          垂直居中，中线自然对齐（flex 项不发生 margin 折叠，更可靠） */}
-      <section className="md:flex md:min-h-[80vh] md:items-center md:gap-[100px] min-[1400px]:gap-[120px]">
-        <div className="mb-12 flex justify-center md:mb-0 md:flex-1">
+      {/* 播放器 —— 桌面端 section 锁 80vh 并整体横向 + 垂直居中：
+          - justify-center 让"唱片 + 内容"两列作为一个整体在容器内横向居中
+          - items-center 让两列在 80vh 内垂直居中（中线对齐）
+          - 两列都不用 flex-1，按各自固有/最大宽度排，避免一列被撑大、整体偏左 */}
+      <section className="md:flex md:min-h-[80vh] md:items-center md:justify-center md:gap-[100px] min-[1400px]:gap-[120px]">
+        <div className="mb-12 flex justify-center md:mb-0 md:shrink-0">
           <div className="w-[360px] max-w-full md:w-[480px] min-[1400px]:w-[540px]">
             <Vinyl isPlaying={isPlaying} />
           </div>
         </div>
 
-        <div className="flex flex-col md:max-w-[600px] md:flex-1 md:justify-center">
+        <div className="flex w-full flex-col md:w-[600px] md:max-w-[600px] md:justify-center md:self-stretch">
           <div className="mb-7 md:mb-10">
             <p className="text-eyebrow mb-3 text-mt-muted">
               {active.moodTag}
@@ -193,7 +195,7 @@ function PlayerView({
             <WaveProgressBar progress={0} currentTime="0:00" totalTime="--:--" />
           </div>
 
-          <div className="mt-4 flex items-center justify-between md:justify-start md:gap-7">
+          <div className="mt-4 flex items-center justify-between md:justify-center md:gap-7">
             <ControlButton label="Shuffle">
               <Shuffle className="size-5" strokeWidth={1.6} />
             </ControlButton>
