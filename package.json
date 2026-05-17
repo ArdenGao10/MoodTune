@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -H 127.0.0.1",
+    "dev": "NODE_USE_ENV_PROXY=1 NO_PROXY=open.bigmodel.cn,api.openweathermap.org next dev -H 127.0.0.1",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
