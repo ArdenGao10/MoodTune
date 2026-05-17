@@ -1,0 +1,236 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+/*
+ * MoodTune —— 手绘黑胶 × 现代极简。
+ * 双主题：data-theme="dark"（默认）/ "light"（暖米色）。
+ * 颜色全部走 CSS 变量，切换 data-theme 即整体换肤。
+ */
+
+@custom-variant dark (&:is([data-theme="dark"] *));
+
+@theme inline {
+  /* MoodTune 设计令牌 */
+  --color-mt-bg: var(--bg);
+  --color-mt-fg: var(--fg);
+  --color-mt-muted: var(--fg-muted);
+  --color-mt-faint: var(--fg-faint);
+  --color-mt-stroke: var(--border);
+  --color-mt-strong: var(--border-strong);
+
+  /* 字体 */
+  --font-sans: var(--font-inter);
+  --font-handwriting: var(--font-caveat);
+  --font-mono: var(--font-mono);
+  --font-heading: var(--font-inter);
+
+  /* shadcn 令牌映射 */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+}
+
+/* 与主题无关的基础令牌 */
+:root {
+  --radius: 0.625rem;
+  --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+  --destructive: oklch(0.62 0.21 25);
+}
+
+/* ============ 暗色主题（默认） ============ */
+[data-theme="dark"] {
+  --bg: #0a0a0a;
+  --fg: #f0f0f0;
+  --fg-muted: #a0a0a0;
+  --fg-faint: #5a5a5a;
+  --border: #3a3a3a;
+  --border-strong: #f0f0f0;
+
+  /* 唱片相关 */
+  --vinyl-base: #0d0d0d;
+  --vinyl-groove: #2a2a2a;
+  --vinyl-groove-faint: #1a1a1a;
+  --vinyl-inner-edge: #888888;
+  --doodle: #f0f0f0;
+  --doodle-faint: #888888;
+  --hole: #f0f0f0;
+
+  /* shadcn 表面色 */
+  --background: #0a0a0a;
+  --foreground: #f0f0f0;
+  --card: #141414;
+  --card-foreground: #f0f0f0;
+  --popover: #141414;
+  --popover-foreground: #f0f0f0;
+  --primary: #f0f0f0;
+  --primary-foreground: #0a0a0a;
+  --secondary: #1c1c1c;
+  --secondary-foreground: #f0f0f0;
+  --muted: #1c1c1c;
+  --muted-foreground: #a0a0a0;
+  /* 产品强调色（暖橙）—— 仅用于 mood tag 选中 / 进度条 / PLAY hover / DJ 签名 */
+  --accent: #e8775c;
+  --accent-foreground: #f0f0f0;
+  --input: #3a3a3a;
+  --ring: #3a3a3a;
+}
+
+/* ============ 亮色主题（暖米色） ============ */
+[data-theme="light"] {
+  --bg: #f5f1e8;
+  --fg: #1a1a1a;
+  --fg-muted: #5a5550;
+  --fg-faint: #a09a8e;
+  --border: #c4bcaa;
+  --border-strong: #1a1a1a;
+
+  --vinyl-base: #1a1410;
+  --vinyl-groove: #3a322a;
+  --vinyl-groove-faint: #2a221a;
+  --vinyl-inner-edge: #888888;
+  --doodle: #f5f1e8;
+  --doodle-faint: #b0a89a;
+  --hole: #f5f1e8;
+
+  --background: #f5f1e8;
+  --foreground: #1a1a1a;
+  --card: #efe9dc;
+  --card-foreground: #1a1a1a;
+  --popover: #efe9dc;
+  --popover-foreground: #1a1a1a;
+  --primary: #1a1a1a;
+  --primary-foreground: #f5f1e8;
+  --secondary: #e5decf;
+  --secondary-foreground: #1a1a1a;
+  --muted: #e5decf;
+  --muted-foreground: #5a5550;
+  /* 产品强调色（亮色主题下偏赤陶） */
+  --accent: #c45a3f;
+  --accent-foreground: #1a1a1a;
+  --input: #c4bcaa;
+  --ring: #c4bcaa;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    background-color: var(--bg);
+  }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-inter), Arial, Helvetica, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+    overflow-x: hidden;
+    /* 切换主题时平滑过渡 */
+    transition:
+      background 0.4s ease,
+      color 0.4s ease;
+  }
+
+  /* 全局细颗粒噪点叠层 —— 给纯色背景一点手作纸张感 */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 100;
+    opacity: 0.05;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* 纤细、低对比的滚动条 */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  *::-webkit-scrollbar-thumb {
+    background-color: var(--border);
+    border-radius: 9999px;
+  }
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::selection {
+    background-color: var(--fg);
+    color: var(--bg);
+  }
+}
+
+/* ============ 唱片动画关键帧 ============ */
+@keyframes mt-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes mt-spin-reverse {
+  to {
+    transform: rotate(-360deg);
+  }
+}
+@keyframes mt-wobble {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 -2px;
+  }
+}
+
+/* ============ 排版工具类 ============ */
+@layer components {
+  /* 装饰文字：超小字号、全大写、宽字距 —— 例如 "NOW PLAYING" */
+  .text-eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    font-size: 0.625rem;
+    font-weight: 500;
+  }
+  /* 超大歌名标题 */
+  .text-display {
+    text-transform: uppercase;
+    letter-spacing: -0.03em;
+    font-weight: 800;
+    line-height: 0.95;
+  }
+  /* 艺人名 / 副标题 */
+  .text-artist {
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    font-weight: 500;
+  }
+  /* 手写体（DJ 签名、装饰语） */
+  .font-hand {
+    font-family: var(--font-caveat), cursive;
+  }
+}
