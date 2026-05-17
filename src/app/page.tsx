@@ -26,12 +26,12 @@ export default function HomePage() {
 
   return (
     <HomeInteraction onActivate={handleBegin}>
-      {/* ============ 桌面端 ≥1024px：右下角压角的大唱片 ============ */}
-      {/* 圆心钉在视口右下角外侧（translate 35%/40%）→ 露出左上约 3/4 圆，右/下被视口切掉。
-          z-[1] 低于顶栏状态区(z-10) → 不遮挡右上角状态信息。 */}
-      <div className="fixed bottom-0 right-0 z-[1] hidden h-[min(110vh,110vw)] w-[min(110vh,110vw)] translate-x-[35%] translate-y-[40%] lg:block">
+      {/* ============ 桌面端 ≥1024px：压向左上的大唱片 ============ */}
+      {/* 用 left/top 直接锚定圆盘最左点(52vw)与最顶点(26vh) —— 与屏幕比例无关；
+          直径 min(130vh,130vw)，右/下大幅切出视口。z-[1] 低于状态区(z-10)。 */}
+      <div className="fixed left-[52vw] top-[26vh] z-[1] hidden h-[min(130vh,130vw)] w-[min(130vh,130vw)] lg:block">
         <motion.div
-          initial={{ x: "24%", y: "24%", opacity: 0 }}
+          initial={{ x: "20%", y: "20%", opacity: 0 }}
           animate={{ x: 0, y: 0, opacity: 1 }}
           transition={{ duration: 0.8, ease: "easeOut" }}
           className="h-full w-full"
