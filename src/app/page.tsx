@@ -1,158 +1,128 @@
 "use client";
 
 /*
- * / —— Home：情绪输入页。
- * 静态手绘唱片 + 手写体提示 + 四种情绪输入 + PLAY。
- * 点击 PLAY 即发起推荐请求并跳转到 /recommendations。
+ * / —— Home：封面页。
+ * 桌面：左侧文案 + 右侧完整左半圆唱片（圆心钉在视口右缘，垂直居中，上下不裁切）。
+ * 移动：文案在上，唱片在下，aspect-square 强制正圆、底部略切。
+ * 点击页面任意位置跳转 /mood-input。品牌名 MOODTUNE 见顶栏。
  */
 
-import { useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 import { Vinyl } from "@/components/vinyl";
-import { RoughButton } from "@/components/rough-button";
-import { MoodTagPill } from "@/components/mood-tag-pill";
-import { VibePicker } from "@/components/vibe-picker";
-import { ImageDropzone } from "@/components/image-dropzone";
-import { useMoodSession } from "@/components/mood-session-provider";
-
-const MOODS = [
-  "Melancholy",
-  "Energized",
-  "Focused",
-  "Nostalgic",
-  "Restless",
-  "Tender",
-  "Numb",
-  "Playful",
-  "Anxious",
-  "Content",
-];
-const MAX_MOODS = 3;
-
-function SectionTitle({ children }: { children: ReactNode }) {
-  return (
-    <p className="mb-4 text-[10px] font-medium uppercase tracking-[0.25em] text-mt-muted">
-      {children}
-    </p>
-  );
-}
+import { HomeInteraction } from "@/components/home-interaction";
 
 export default function HomePage() {
   const router = useRouter();
-  const { startRecommendation } = useMoodSession();
 
-  const [moodTags, setMoodTags] = useState<string[]>([]);
-  const [moodText, setMoodText] = useState("");
-  const [colorEmoji, setColorEmoji] = useState("");
-  const [weatherEmoji, setWeatherEmoji] = useState("");
-  const [image, setImage] = useState<string | null>(null);
+  const handleBegin = () => router.push("/mood-input");
 
-  const hasInput =
-    moodTags.length > 0 ||
-    moodText.trim() !== "" ||
-    colorEmoji !== "" ||
-    weatherEmoji !== "" ||
-    image !== null;
-
-  function toggleMood(mood: string) {
-    setMoodTags((prev) =>
-      prev.includes(mood)
-        ? prev.filter((m) => m !== mood)
-        : prev.length < MAX_MOODS
-          ? [...prev, mood]
-          : prev,
-    );
-  }
-
-  function handlePlay() {
-    if (!hasInput) return;
-    startRecommendation({
-      moodTags,
-      moodText: moodText.trim(),
-      colorEmoji,
-      weatherEmoji,
-      imageBase64: image ?? undefined,
-    });
-    router.push("/recommendations");
-  }
+  // 文案分批淡入：slogan → 描述 → 提示
+  const fadeUp = (delay: number) => ({
+    initial: { opacity: 0, y: 12 },
+    animate: { opacity: 1, y: 0 },
+    transition: { duration: 0.5, delay, ease: "easeOut" as const },
+  });
 
   return (
-    <div className="flex flex-col items-center pt-6 md:pt-10">
-      {/* 静态手绘唱片 —— 中心显示固定的 <BrandCover /> */}
-      <Vinyl size={260} isPlaying={false} className="mb-7" />
-      <p className="font-hand text-[24px] text-mt-muted">
-        tell me how you feel...
-      </p>
-
-      {/* 四种情绪输入 */}
-      <div className="mt-12 w-full max-w-[900px] md:grid md:grid-cols-2 md:gap-x-16 md:gap-y-12">
-        {/* A. 情绪标签 */}
-        <section className="mb-10 md:mb-0">
-          <SectionTitle>Pick up to 3 moods</SectionTitle>
-          <div className="flex flex-wrap gap-2">
-            {MOODS.map((mood) => (
-              <MoodTagPill
-                key={mood}
-                label={mood}
-                selected={moodTags.includes(mood)}
-                disabled={moodTags.length >= MAX_MOODS}
-                onClick={() => toggleMood(mood)}
-              />
-            ))}
-          </div>
-        </section>
-
-        {/* B. 自由文字 */}
-        <section className="mb-10 md:mb-0">
-          <SectionTitle>Or, in your own words</SectionTitle>
-          <input
-            type="text"
-            maxLength={80}
-            value={moodText}
-            onChange={(e) => setMoodText(e.target.value)}
-            placeholder="just finished a long call, sky is gray..."
-            aria-label="Describe your mood"
-            className="w-full border-b border-mt-stroke bg-transparent py-3 text-[15px] text-mt-fg placeholder:italic placeholder:text-mt-faint focus:border-mt-strong focus:outline-none"
-          />
-        </section>
-
-        {/* C. Vibe */}
-        <section className="mb-10 md:mb-0">
-          <SectionTitle>Pick a vibe</SectionTitle>
-          <VibePicker
-            color={colorEmoji}
-            weather={weatherEmoji}
-            onColorChange={setColorEmoji}
-            onWeatherChange={setWeatherEmoji}
-          />
-        </section>
-
-        {/* D. 图片 */}
-        <section>
-          <SectionTitle>Show me what you see</SectionTitle>
-          <ImageDropzone value={image} onChange={setImage} />
-        </section>
-      </div>
-
-      {/* PLAY */}
-      <div className="mt-16 flex flex-col items-center gap-3">
-        <RoughButton
-          size={120}
-          accentHover
-          disabled={!hasInput}
-          onClick={handlePlay}
-          aria-label="Find my songs"
+    <HomeInteraction onActivate={handleBegin}>
+      {/* ============ 桌面端 ≥1024px：固定的半露唱片 ============ */}
+      {/* 圆心钉在视口右缘（translateX 50%）→ 完整左半圆露出；垂直居中且直径 ≤96vh → 上下不裁切 */}
+      <div className="fixed right-0 top-1/2 z-0 hidden h-[min(96vh,60vw)] w-[min(96vh,60vw)] -translate-y-1/2 translate-x-1/2 lg:block">
+        <motion.div
+          initial={{ x: "70%" }}
+          animate={{ x: 0 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+          className="h-full w-full"
         >
-          <span className="text-[12px] font-medium uppercase tracking-[0.25em]">
-            Play
-          </span>
-        </RoughButton>
-        {!hasInput && (
-          <p className="text-[10px] uppercase tracking-[0.15em] text-mt-faint">
-            Add at least one feeling
-          </p>
-        )}
+          <Vinyl isPlaying className="h-full w-full" />
+        </motion.div>
       </div>
-    </div>
+
+      {/* ============ 桌面端 ≥1024px：左侧文案 ============ */}
+      <div className="relative z-10 hidden min-h-[calc(100vh-180px)] max-w-[min(600px,48vw)] flex-col justify-center lg:flex">
+        <motion.h1
+          {...fadeUp(0)}
+          className="font-black tracking-[-0.02em] text-mt-fg"
+          style={{ fontSize: "clamp(40px, 5.4vw, 88px)", lineHeight: 0.92 }}
+        >
+          Tonight,
+          <br />
+          what does
+          <br />
+          your mood
+          <br />
+          sound{" "}
+          <span className="italic" style={{ color: "var(--accent)" }}>
+            like?
+          </span>
+        </motion.h1>
+
+        <motion.p
+          {...fadeUp(0.15)}
+          className="mt-9 text-[17px] leading-[1.6] text-mt-muted"
+        >
+          An AI DJ that picks songs for your every weather, every feeling,
+          every late night. — Curated for those who outgrew Top 50.
+        </motion.p>
+
+        <motion.p
+          {...fadeUp(0.3)}
+          className="mt-6 font-hand text-[16px] text-mt-muted"
+        >
+          click anywhere to begin
+        </motion.p>
+      </div>
+
+      {/* ============ < 1024px：纵向堆叠，唱片在下、保持正圆 ============ */}
+      <div className="flex min-h-[calc(100vh-200px)] flex-col items-center justify-center gap-9 lg:hidden">
+        {/* 文案 */}
+        <div className="flex flex-col items-center px-2 text-center">
+          <motion.h1
+            {...fadeUp(0)}
+            className="font-black tracking-[-0.02em] text-mt-fg"
+            style={{ fontSize: "clamp(38px, 9vw, 52px)", lineHeight: 0.95 }}
+          >
+            What does
+            <br />
+            your mood
+            <br />
+            sound{" "}
+            <span className="italic" style={{ color: "var(--accent)" }}>
+              like?
+            </span>
+          </motion.h1>
+
+          <motion.p
+            {...fadeUp(0.15)}
+            className="mt-5 max-w-[330px] text-[14px] leading-[1.55] text-mt-muted"
+          >
+            An AI DJ for your every weather, every feeling, every late night.
+          </motion.p>
+
+          <motion.p
+            {...fadeUp(0.3)}
+            className="mt-5 font-hand text-[15px] text-mt-muted"
+          >
+            tap anywhere
+          </motion.p>
+        </div>
+
+        {/* 唱片：aspect-square 容器强制正圆，外框略矮 → 底部稍切 */}
+        <div
+          className="relative overflow-hidden"
+          style={{ width: "min(86vw, 420px)", height: "min(63vw, 308px)" }}
+        >
+          <motion.div
+            initial={{ y: 36, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+            className="w-full"
+          >
+            <Vinyl isPlaying />
+          </motion.div>
+        </div>
+      </div>
+    </HomeInteraction>
   );
 }

@@ -206,6 +206,17 @@
     translate: 0 -2px;
   }
 }
+/* 首页点击 ripple —— 手绘同心圆快速扩散并淡出 */
+@keyframes mt-ripple {
+  0% {
+    transform: scale(0.3);
+    opacity: 0.75;
+  }
+  100% {
+    transform: scale(1.85);
+    opacity: 0;
+  }
+}
 
 /* ============ 排版工具类 ============ */
 @layer components {
