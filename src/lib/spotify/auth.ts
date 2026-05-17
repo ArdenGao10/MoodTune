@@ -60,9 +60,11 @@ function clientId(): string {
   return id;
 }
 
-function redirectUri(): string {
-  // Spotify 已不再允许 localhost，需用 127.0.0.1 回环 IP；
-  // 浏览器访问也必须用同一个 host，否则 PKCE cookie 跨域读不到。
+/**
+ * OAuth 回调地址 —— 必须与 Spotify Dashboard 登记的完全一致。
+ * Spotify 已不再允许 localhost，需用 127.0.0.1 回环 IP。
+ */
+export function getRedirectUri(): string {
   return (
     process.env.SPOTIFY_REDIRECT_URI ??
     "http://127.0.0.1:3000/api/auth/spotify/callback"
@@ -159,7 +161,7 @@ export async function getAuthUrl(): Promise<{
   const params = new URLSearchParams({
     client_id: clientId(),
     response_type: "code",
-    redirect_uri: redirectUri(),
+    redirect_uri: getRedirectUri(),
     scope: SPOTIFY_SCOPES,
     code_challenge_method: "S256",
     code_challenge: challenge,
@@ -193,7 +195,7 @@ export function exchangeCodeForToken(
     new URLSearchParams({
       grant_type: "authorization_code",
       code,
-      redirect_uri: redirectUri(),
+      redirect_uri: getRedirectUri(),
       client_id: clientId(),
       code_verifier: verifier,
     }),
