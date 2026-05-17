@@ -13,13 +13,18 @@ export const runtime = "nodejs";
 
 export async function GET(): Promise<NextResponse<MeResponse>> {
   const token = await getCurrentToken();
-  if (!token) return NextResponse.json({ user: null });
+  if (!token) {
+    console.warn("/api/me: no Spotify access token (cookie missing / refresh failed)");
+    return NextResponse.json({ user: null });
+  }
 
   try {
     const user = await getCurrentUser();
+    console.log(`/api/me: loaded user id=${user.id} product=${user.product}`);
     return NextResponse.json({ user });
   } catch (error) {
-    console.warn("/api/me: failed to load Spotify user", error);
+    const detail = error instanceof Error ? error.message : String(error);
+    console.error("/api/me: getCurrentUser failed —", detail);
     return NextResponse.json({ user: null });
   }
 }
