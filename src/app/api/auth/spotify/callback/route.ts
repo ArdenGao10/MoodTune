@@ -42,9 +42,26 @@ export async function GET(req: Request) {
   const verifier = store.get(SP_COOKIE.verifier)?.value;
   const savedState = store.get(SP_COOKIE.state)?.value;
 
-  if (oauthError) return fail("denied");
-  if (!code || !returnedState) return fail("error");
-  if (!verifier || !savedState || returnedState !== savedState) {
+  if (oauthError) {
+    console.warn("spotify callback: authorization denied —", oauthError);
+    return fail("denied");
+  }
+  if (!code || !returnedState) {
+    console.error("spotify callback: missing code or state in query");
+    return fail("error");
+  }
+  if (!verifier || !savedState) {
+    // 最常见原因：登录与回调的 host 不一致（localhost vs 127.0.0.1），
+    // 导致 PKCE 临时 cookie 跨域读不到。
+    console.error(
+      "spotify callback: PKCE cookies missing — likely a host mismatch " +
+        "between login and callback (use 127.0.0.1 consistently). " +
+        `verifier=${Boolean(verifier)} state=${Boolean(savedState)}`,
+    );
+    return fail("error");
+  }
+  if (returnedState !== savedState) {
+    console.error("spotify callback: state mismatch (possible CSRF)");
     return fail("error");
   }
 
