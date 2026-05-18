@@ -10,8 +10,8 @@ export const runtime = "nodejs";
 
 export interface YouTubeSearchResponse {
   videoId: string | null;
-  title?: string | null;
-  channelTitle?: string | null;
+  /** 匹配视频的缩略图 —— 用作专辑封面 */
+  thumbnailUrl?: string | null;
   error?: string;
 }
 
@@ -38,8 +38,7 @@ export async function GET(
     const match = await searchYouTubeVideo(q);
     return NextResponse.json({
       videoId: match?.videoId ?? null,
-      title: match?.title ?? null,
-      channelTitle: match?.channelTitle ?? null,
+      thumbnailUrl: match?.thumbnailUrl ?? null,
     });
   } catch (error) {
     console.error("/api/youtube/search failed:", error);

@@ -34,8 +34,11 @@ Rules:
 }
 6. Avoid songs with >50M Spotify streams unless they're undeniable taste markers.
 7. Lean toward album cuts, B-sides, and lesser-known tracks from established artists.
-8. Use accurate, searchable song titles and artist names — they will be matched
-   against Spotify, so avoid nicknames or paraphrased titles.
+8. CRITICAL — accuracy of metadata: every song must be a REAL, released track
+   recorded by that EXACT artist. Never attach a song title to an artist who
+   did not record it. If you are not certain a song exists by that artist,
+   pick a different one you ARE certain about. Use the song's real title and
+   the artist's real, full name (the names will be searched on YouTube).
 Return exactly 3 songs.`;
 
 /**

@@ -37,8 +37,6 @@ export interface Recommendation {
   artist: string;
   note: string;
   moodTag: string;
-  /** 专辑封面 URL —— 由 iTunes 校正时补上;为空时 UI 用 <BrandCover /> 占位 */
-  albumArt?: string | null;
 }
 
 /**

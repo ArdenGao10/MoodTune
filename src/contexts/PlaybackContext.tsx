@@ -4,13 +4,13 @@
  * PlaybackContext —— 播放控制层。
  *
  * 把「当前推荐曲目」交给播放引擎实际播放,并向播放器 UI 暴露统一的
- * 播放态(isPlaying / 进度)和操作(toggle / next / prev / seek)。
+ * 播放态(isPlaying / 进度 / 专辑封面)和操作(toggle / next / prev / seek)。
  *
  * 数据来源:从 MoodSession 读 recommendations + activeIndex。
  * 引擎:YouTubePlaybackEngine —— 每首歌按「歌名 歌手」经 /api/youtube/search
- * 解析出 videoId 再播放。解析结果在内存里缓存,避免重复消耗 API 配额。
- *
- * 外链跳转不在这里 —— 它是「全网都匹配不到」时的最后兜底,与播放无关。
+ * 解析出 videoId 再播放;同一接口还返回视频缩略图,用作专辑封面
+ * (匹配到的视频就是正在播放的音频,封面与音频天然一致)。
+ * 解析结果在内存里缓存,避免重复消耗 API 配额。
  */
 
 import {
@@ -30,6 +30,11 @@ import type { YouTubeSearchResponse } from "@/app/api/youtube/search/route";
 /** 当前曲目在播放引擎上的解析状态 */
 export type PlaybackStatus = "idle" | "resolving" | "ready" | "error";
 
+interface ResolvedTrack {
+  videoId: string;
+  thumbnailUrl: string;
+}
+
 interface PlaybackContextValue {
   isPlaying: boolean;
   /** 当前播放位置(秒) */
@@ -37,6 +42,8 @@ interface PlaybackContextValue {
   /** 当前曲目总时长(秒);未知时为 0 */
   durationSec: number;
   status: PlaybackStatus;
+  /** 当前曲目的专辑封面(取自匹配到的 YouTube 视频);未解析到时为 null */
+  albumArtUrl: string | null;
   /** 播放 / 暂停 */
   toggle: () => void;
   /** 下一首 */
@@ -56,10 +63,11 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
   const [positionSec, setPositionSec] = useState(0);
   const [durationSec, setDurationSec] = useState(0);
   const [status, setStatus] = useState<PlaybackStatus>("idle");
+  const [albumArtUrl, setAlbumArtUrl] = useState<string | null>(null);
 
   const engineRef = useRef<YouTubePlaybackEngine | null>(null);
-  // 「歌名 歌手」→ videoId | null(null 表示搜过但没结果),缓存省配额
-  const cacheRef = useRef<Map<string, string | null>>(new Map());
+  // 「歌名 歌手」→ 解析结果(null 表示搜过但没结果),缓存省配额
+  const cacheRef = useRef<Map<string, ResolvedTrack | null>>(new Map());
   // 用户是否「想要播放」—— 切歌时据此决定继续播放还是仅 cue
   const wantPlayRef = useRef(false);
 
@@ -70,8 +78,7 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
   const nextRef = useRef<() => void>(() => {});
 
   // 保持 activeRef 同步(在 effect 里更新,不在 render 期间写 ref)。
-  // 声明在 loadActive 的 effect 之前 —— effect 按声明顺序执行,
-  // 保证 loadActive 跑之前 activeRef 已是最新。
+  // 声明在 loadActive 的 effect 之前 —— effect 按声明顺序执行。
   useEffect(() => {
     activeRef.current = active;
   });
@@ -92,9 +99,9 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
     return engineRef.current;
   }, []);
 
-  /** 把「歌名 歌手」解析成 YouTube videoId(带缓存) */
-  const resolveVideoId = useCallback(
-    async (title: string, artist: string): Promise<string | null> => {
+  /** 把「歌名 歌手」解析成 videoId + 封面(带缓存) */
+  const resolveTrack = useCallback(
+    async (title: string, artist: string): Promise<ResolvedTrack | null> => {
       const q = `${title} ${artist}`.trim();
       const cache = cacheRef.current;
       if (cache.has(q)) return cache.get(q) ?? null;
@@ -103,9 +110,11 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
           `/api/youtube/search?q=${encodeURIComponent(q)}`,
         );
         const data = (await res.json()) as YouTubeSearchResponse;
-        const id = data.videoId ?? null;
-        cache.set(q, id);
-        return id;
+        const resolved: ResolvedTrack | null = data.videoId
+          ? { videoId: data.videoId, thumbnailUrl: data.thumbnailUrl ?? "" }
+          : null;
+        cache.set(q, resolved);
+        return resolved;
       } catch {
         return null;
       }
@@ -121,21 +130,23 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
       setStatus("resolving");
       setPositionSec(0);
       setDurationSec(0);
-      const videoId = await resolveVideoId(a.title, a.artist);
+      setAlbumArtUrl(null);
+      const resolved = await resolveTrack(a.title, a.artist);
       if (a !== activeRef.current) return; // 解析期间已切歌,作废
-      if (!videoId) {
+      if (!resolved) {
         setStatus("error");
         return;
       }
       setStatus("ready");
+      setAlbumArtUrl(resolved.thumbnailUrl || null);
       const engine = getEngine();
       if (forcePlay || wantPlayRef.current) {
-        void engine.loadAndPlay(videoId);
+        void engine.loadAndPlay(resolved.videoId);
       } else {
-        void engine.cue(videoId);
+        void engine.cue(resolved.videoId);
       }
     },
-    [resolveVideoId, getEngine],
+    [resolveTrack, getEngine],
   );
 
   // 活动曲目变化 → 重新解析(标题+歌手唯一确定一首)
@@ -197,12 +208,23 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
       positionSec,
       durationSec,
       status,
+      albumArtUrl,
       toggle,
       next,
       prev,
       seekFraction,
     }),
-    [isPlaying, positionSec, durationSec, status, toggle, next, prev, seekFraction],
+    [
+      isPlaying,
+      positionSec,
+      durationSec,
+      status,
+      albumArtUrl,
+      toggle,
+      next,
+      prev,
+      seekFraction,
+    ],
   );
 
   return (
