@@ -338,6 +338,52 @@
     text-transform: uppercase; color: var(--muted);
   }
 
+  /* ═══════════════ 浏览器窗口框 ═══════════════ */
+  .shot-grid {
+    position: relative; z-index: 1;
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .browser {
+    border: 1px solid var(--line);
+    border-radius: 11px; overflow: hidden;
+    background: var(--paper-2);
+    box-shadow: 0 18px 36px -24px rgba(40,18,6,.55);
+    transition: transform .25s, box-shadow .25s;
+  }
+  .shot:hover .browser {
+    transform: translateY(-4px);
+    box-shadow: 0 26px 46px -24px rgba(40,18,6,.6);
+  }
+  .browser .bar {
+    display: flex; align-items: center; gap: 6px;
+    height: 28px; padding: 0 12px;
+    background: var(--paper-2);
+    border-bottom: 1px solid var(--line);
+  }
+  .browser .dot {
+    width: 8px; height: 8px; border-radius: 50%; flex: none;
+  }
+  .browser .dot.r { background: #D9694A; }
+  .browser .dot.y { background: #D9A93C; }
+  .browser .dot.g { background: #6FA177; }
+  .browser .url {
+    margin-left: 10px;
+    font-family: var(--mono); font-size: 9px;
+    letter-spacing: .04em; color: var(--muted);
+    background: rgba(0,0,0,.05);
+    padding: 3px 12px; border-radius: 999px;
+  }
+  .browser img { display: block; width: 100%; }
+  .caption { margin-top: 11px; }
+  .caption .cap-name { font-size: 14px; font-weight: 800; }
+  .caption .cap-desc {
+    margin-top: 3px;
+    font-family: var(--mono); font-size: 9.5px;
+    letter-spacing: .1em; color: var(--muted);
+  }
+  .shot.hero { margin-bottom: 22px; }
+
   /* ═══════════════ 导出 PDF 按钮 ═══════════════ */
   .pdf-btn {
     position: fixed; right: 26px; bottom: 26px; z-index: 60;
@@ -375,7 +421,7 @@
     }
     .page:last-child { page-break-after: avoid; break-after: avoid; }
     .feature-card, .arch-row, .step, .design-note,
-    .section-head, .meta-grid {
+    .section-head, .meta-grid, .shot {
       page-break-inside: avoid; break-inside: avoid;
     }
   }
@@ -564,6 +610,85 @@
   <div class="design-note reveal">
     <div class="label">RESILIENCE · 多候选自动回退</div>
     <p>每首歌解析出一组候选视频，并校验可嵌入性；某个放不了就静默换下一个，显著减少播放失败。</p>
+  </div>
+
+</div>
+
+<!-- ════════════ 第 4 页 · 产品截图 ════════════ -->
+<div class="page">
+  <div class="section-head reveal">
+    <div class="label">PRODUCT SHOTS · 产品截图</div>
+    <div class="title">走进这间<span class="accent">音乐房间</span></div>
+    <div class="sub">深夜唱片店的暖色 · 孤独感 · 编辑式排版</div>
+  </div>
+
+  <div class="shot hero reveal">
+    <div class="browser">
+      <div class="bar">
+        <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+        <span class="url">moodtune.app / recommendations</span>
+      </div>
+      <img src="screenshots/recommendations.png" alt="唱片播放器" />
+    </div>
+    <div class="caption">
+      <div class="cap-name">唱片播放器</div>
+      <div class="cap-desc">PLAYER · 推荐到达即自动播放,封面边缘随转动流动</div>
+    </div>
+  </div>
+
+  <div class="shot-grid">
+    <div class="shot reveal">
+      <div class="browser">
+        <div class="bar">
+          <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+          <span class="url">moodtune.app</span>
+        </div>
+        <img src="screenshots/home.png" alt="首页" />
+      </div>
+      <div class="caption">
+        <div class="cap-name">首页</div>
+        <div class="cap-desc">HOME · 点击任意处,翻开今夜这张唱片</div>
+      </div>
+    </div>
+    <div class="shot reveal">
+      <div class="browser">
+        <div class="bar">
+          <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+          <span class="url">moodtune.app / mood-input</span>
+        </div>
+        <img src="screenshots/moodinput.png" alt="写下心情" />
+      </div>
+      <div class="caption">
+        <div class="cap-name">写下心情</div>
+        <div class="cap-desc">MOOD INPUT · 标签 · 文字 · 颜色 · 天气 · 照片</div>
+      </div>
+    </div>
+    <div class="shot reveal">
+      <div class="browser">
+        <div class="bar">
+          <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+          <span class="url">moodtune.app / history</span>
+        </div>
+        <img src="screenshots/history.png" alt="心情日历" />
+      </div>
+      <div class="caption">
+        <div class="cap-name">心情日历</div>
+        <div class="cap-desc">HISTORY · 每个记录的夜晚,压成一格小唱片</div>
+      </div>
+    </div>
+    <div class="shot reveal">
+      <div class="browser">
+        <div class="bar">
+          <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+          <span class="url">moodtune.app / recap</span>
+        </div>
+        <img src="screenshots/recap.png" alt="月度回顾" />
+      </div>
+      <div class="caption">
+        <div class="cap-name">月度回顾</div>
+        <div class="cap-desc">RECAP · 一整月的情绪,混音成一面唱片</div>
+      </div>
+    </div>
   </div>
 
   <div class="page-footer">
