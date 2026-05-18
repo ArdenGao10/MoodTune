@@ -14,6 +14,7 @@ import { MODELS, parseJsonRobust, zhipu } from "@/lib/zhipu";
 import { DJ_SYSTEM_PROMPT, buildUserText } from "@/lib/dj-prompt";
 import { getCurrentToken } from "@/lib/spotify/auth";
 import { matchRecommendationsToTracks } from "@/lib/spotify/match";
+import { enrichWithITunes } from "@/lib/itunes/client";
 import type {
   Recommendation,
   RecommendRequest,
@@ -86,6 +87,14 @@ export async function POST(
       // 调用 / JSON 解析失败 —— 重试一次
       console.warn("recommend: first attempt failed, retrying", firstError);
       recommendations = await callZhipu();
+    }
+
+    // 用 iTunes 校正歌手信息并补上专辑封面（GLM 偶尔把歌名/歌手配错）。
+    // 失败不影响主流程 —— enrichWithITunes 内部已对单首做兜底。
+    try {
+      recommendations = await enrichWithITunes(recommendations);
+    } catch (enrichError) {
+      console.warn("recommend: iTunes enrichment failed", enrichError);
     }
 
     // 已登录 → 匹配 Spotify，附带统一 Track[]（Real Mode）

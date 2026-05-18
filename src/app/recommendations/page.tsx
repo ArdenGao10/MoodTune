@@ -186,7 +186,7 @@ function PlayerView({
       <section className="md:flex md:min-h-[80vh] md:items-center md:justify-center md:gap-[100px] min-[1400px]:gap-[120px]">
         <div className="mb-12 flex justify-center md:mb-0 md:shrink-0">
           <div className="w-[360px] max-w-full md:w-[480px] min-[1400px]:w-[540px]">
-            <Vinyl isPlaying={isPlaying} />
+            <Vinyl isPlaying={isPlaying} albumArtUrl={active.albumArt ?? undefined} />
           </div>
         </div>
 
@@ -275,7 +275,7 @@ function PlayerView({
         <p className="mb-5 text-[10px] uppercase tracking-[0.25em] text-mt-muted">
           Up next — tap to play
         </p>
-        <div className="grid gap-3 md:grid-cols-3">
+        <div className="grid gap-3 md:grid-cols-2">
           {rest.map(({ rec, index }) => (
             <RecCard
               key={`${rec.title}-${index}`}
