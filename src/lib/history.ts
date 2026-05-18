@@ -20,9 +20,14 @@ export interface MoodSessionRecord {
   colorEmoji: string;
   weatherEmoji: string;
   recommendations: Recommendation[];
+  /** 头号推荐曲的专辑封面 —— 播放解析出来后回填,用作历史日历的格子封面 */
+  coverArt?: string | null;
 }
 
 const STORAGE_KEY = "moodtune-history";
+
+/** 最近存下的会话 id —— 供 updateLatestSessionCover 回填封面 */
+let latestSessionId: string | null = null;
 
 function read(): MoodSessionRecord[] {
   if (typeof window === "undefined") return [];
@@ -93,10 +98,23 @@ export function saveSession(
     recommendations,
   };
   write([record, ...read()]);
+  latestSessionId = record.id;
   // 让快照失效并通知订阅者
   snapshotCache = null;
   for (const listener of listeners) listener();
   return record;
+}
+
+/** 给最近一次会话回填封面(头号推荐曲的专辑封面) */
+export function updateLatestSessionCover(coverArt: string): void {
+  if (!latestSessionId || !coverArt) return;
+  const records = read();
+  const record = records.find((r) => r.id === latestSessionId);
+  if (!record || record.coverArt === coverArt) return;
+  record.coverArt = coverArt;
+  write(records);
+  snapshotCache = null;
+  for (const listener of listeners) listener();
 }
 
 /** 本地日期键 YYYY-MM-DD(按用户本地时区) */

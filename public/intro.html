@@ -1,0 +1,507 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MoodTune — Turn how you feel into a record</title>
+<meta name="description" content="MoodTune reads your mood and an AI DJ presses three songs onto a record, just for tonight." />
+<style>
+  /* ===========================================================
+     MoodTune —— 产品介绍页(独立单文件,无外部依赖)
+     视觉:深夜唱片店的暖色、孤独、编辑式排版
+     =========================================================== */
+  :root {
+    --cream:      #F4EFE6;
+    --cream-2:    #EBE2D2;
+    --ink:        #2A1C12;
+    --muted:      #8B7E6D;
+    --faint:      #B7AB98;
+    --accent:     #D2703E;
+    --accent-2:   #A84A28;
+    --vinyl:      #16110D;
+    --line:       #DCD2C0;
+    --sans: ui-sans-serif, -apple-system, "Segoe UI", Roboto,
+            "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: var(--sans);
+    background: var(--cream);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  /* 全局柔光背景 */
+  body::before {
+    content: "";
+    position: fixed; inset: 0; z-index: -1;
+    background:
+      radial-gradient(60vw 50vh at 72% 12%, rgba(210,112,62,.18), transparent 70%),
+      radial-gradient(50vw 40vh at 10% 88%, rgba(168,74,40,.12), transparent 70%);
+    animation: glow 14s ease-in-out infinite alternate;
+  }
+  @keyframes glow {
+    from { opacity: .7; transform: scale(1); }
+    to   { opacity: 1;  transform: scale(1.12); }
+  }
+
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 32px; }
+
+  .eyebrow {
+    font-size: 11px; font-weight: 600;
+    letter-spacing: .28em; text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* ---------- 顶栏 ---------- */
+  header {
+    position: sticky; top: 0; z-index: 50;
+    backdrop-filter: blur(8px);
+    background: rgba(244,239,230,.7);
+    border-bottom: 1px solid var(--line);
+  }
+  header .wrap {
+    height: 64px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .brand {
+    font-weight: 900; letter-spacing: .14em; font-size: 16px;
+  }
+  .brand i { font-weight: 400; font-style: italic; color: var(--muted); letter-spacing: 0; }
+  .nav-cta {
+    font-size: 11px; font-weight: 600; letter-spacing: .18em;
+    text-transform: uppercase; text-decoration: none;
+    color: var(--ink); border: 1px solid var(--ink);
+    padding: 9px 18px; border-radius: 999px;
+    transition: background .25s, color .25s;
+  }
+  .nav-cta:hover { background: var(--ink); color: var(--cream); }
+
+  /* ---------- Hero ---------- */
+  .hero { padding: 90px 0 110px; }
+  .hero .wrap {
+    display: grid; grid-template-columns: 1.05fr .95fr;
+    gap: 56px; align-items: center;
+  }
+  .hero-copy .eyebrow { animation: rise .8s .05s both; }
+  .hero h1 {
+    font-size: clamp(52px, 8vw, 104px);
+    line-height: .96; font-weight: 900;
+    letter-spacing: -.03em; margin: 18px 0 0;
+    animation: rise .9s .12s both;
+  }
+  .hero h1 .accent { color: var(--accent); font-style: italic; }
+  .hero .lede {
+    margin-top: 26px; max-width: 30em;
+    font-size: 17px; line-height: 1.65; color: var(--muted);
+    animation: rise .9s .22s both;
+  }
+  .hero-actions {
+    margin-top: 34px; display: flex; align-items: center; gap: 20px;
+    animation: rise .9s .32s both;
+  }
+  .btn {
+    display: inline-flex; align-items: center; gap: 10px;
+    font-size: 12px; font-weight: 600; letter-spacing: .18em;
+    text-transform: uppercase; text-decoration: none;
+    color: var(--cream); background: var(--ink);
+    padding: 15px 28px; border-radius: 999px;
+    transition: transform .2s, background .25s;
+  }
+  .btn:hover { background: var(--accent-2); transform: translateY(-2px); }
+  .btn .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+  .ghost-link {
+    font-size: 13px; color: var(--muted); text-decoration: none;
+    border-bottom: 1px solid var(--line); padding-bottom: 2px;
+    transition: color .2s, border-color .2s;
+  }
+  .ghost-link:hover { color: var(--ink); border-color: var(--ink); }
+
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: none; }
+  }
+
+  /* ---------- 黑胶唱片 ---------- */
+  .vinyl-stage {
+    position: relative;
+    display: flex; align-items: center; justify-content: center;
+    animation: rise 1s .3s both;
+  }
+  .vinyl-float { animation: float 6s ease-in-out infinite; }
+  @keyframes float {
+    0%,100% { transform: translateY(-8px); }
+    50%     { transform: translateY(10px); }
+  }
+  .vinyl {
+    position: relative;
+    width: clamp(260px, 36vw, 380px);
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background:
+      repeating-radial-gradient(circle at 50% 50%,
+        #0d0a07 0, #0d0a07 1px, #1b140e 1px, #1b140e 4px);
+    box-shadow:
+      0 40px 70px -24px rgba(50,24,8,.55),
+      inset 0 0 90px rgba(0,0,0,.7);
+    animation: spin 9s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  /* 中心标签 */
+  .vinyl-label {
+    position: absolute; inset: 32%;
+    border-radius: 50%;
+    background: radial-gradient(circle at 38% 32%,
+      #F3AE74, #D2703E 46%, #8c3f22 76%, #46200f);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    box-shadow: inset 0 0 22px rgba(0,0,0,.35);
+  }
+  .vinyl-label span {
+    font-size: 8.5px; font-weight: 700;
+    letter-spacing: .22em; color: rgba(255,245,235,.78);
+  }
+  .vinyl-label .lbl-b { letter-spacing: .32em; font-weight: 500; }
+  .vinyl-hole {
+    width: 9px; height: 9px; border-radius: 50%;
+    background: var(--cream);
+    margin: 7px 0; box-shadow: inset 0 0 3px rgba(0,0,0,.5);
+  }
+  /* 固定光泽(不随唱片转) */
+  .vinyl-gloss {
+    position: absolute; inset: 0; border-radius: 50%;
+    pointer-events: none;
+    background: linear-gradient(125deg,
+      rgba(255,255,255,.14) 0%, transparent 32%,
+      transparent 64%, rgba(255,255,255,.07) 100%);
+  }
+  /* 唱臂 */
+  .tonearm {
+    position: absolute; top: 4%; right: 2%;
+    width: 46%; height: 6px;
+    transform-origin: right center;
+    transform: rotate(28deg);
+  }
+  .tonearm::before {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(var(--ink), #5a4636);
+    border-radius: 6px;
+  }
+  .tonearm::after {
+    content: ""; position: absolute;
+    right: -9px; top: -7px;
+    width: 20px; height: 20px; border-radius: 50%;
+    background: var(--ink);
+    box-shadow: 0 4px 10px rgba(0,0,0,.3);
+  }
+
+  /* ---------- 区块通用 ---------- */
+  section { padding: 96px 0; }
+  .section-head { max-width: 34em; }
+  .section-head h2 {
+    font-size: clamp(34px, 4.6vw, 58px);
+    line-height: 1.04; font-weight: 900;
+    letter-spacing: -.025em; margin-top: 16px;
+  }
+  .section-head h2 em { font-style: italic; color: var(--accent); }
+
+  /* 滚动浮现 */
+  .reveal {
+    opacity: 0; transform: translateY(30px);
+    transition: opacity .9s cubic-bezier(.2,.7,.2,1),
+                transform .9s cubic-bezier(.2,.7,.2,1);
+  }
+  .reveal.in { opacity: 1; transform: none; }
+
+  /* ---------- 宣言 ---------- */
+  .manifesto {
+    text-align: center; padding: 64px 0;
+    border-top: 1px dashed var(--line);
+    border-bottom: 1px dashed var(--line);
+  }
+  .manifesto p {
+    font-size: clamp(28px, 4.4vw, 52px);
+    font-style: italic; font-weight: 500;
+    line-height: 1.25; letter-spacing: -.02em;
+    max-width: 16em; margin: 0 auto;
+  }
+  .manifesto .accent { color: var(--accent); }
+
+  /* ---------- 工作流程 ---------- */
+  .steps { display: grid; gap: 2px; margin-top: 56px; }
+  .step {
+    display: grid; grid-template-columns: 120px 1fr;
+    gap: 36px; padding: 40px 0;
+    border-top: 1px solid var(--line);
+    transition: padding-left .3s;
+  }
+  .step:last-child { border-bottom: 1px solid var(--line); }
+  .step:hover { padding-left: 14px; }
+  .step .num {
+    font-size: 64px; font-weight: 900; line-height: 1;
+    color: transparent; -webkit-text-stroke: 1.5px var(--faint);
+    transition: color .3s, -webkit-text-stroke-color .3s;
+  }
+  .step:hover .num {
+    color: var(--accent);
+    -webkit-text-stroke-color: var(--accent);
+  }
+  .step h3 {
+    font-size: 25px; font-weight: 800; letter-spacing: -.01em;
+  }
+  .step p {
+    margin-top: 10px; max-width: 38em;
+    font-size: 15.5px; line-height: 1.7; color: var(--muted);
+  }
+
+  /* ---------- 特性卡片 ---------- */
+  .features {
+    display: grid; grid-template-columns: repeat(2, 1fr);
+    gap: 18px; margin-top: 52px;
+  }
+  .card {
+    border: 1px solid var(--line); border-radius: 18px;
+    padding: 30px; background: rgba(255,255,255,.35);
+    transition: transform .25s, border-color .25s, box-shadow .25s;
+  }
+  .card:hover {
+    transform: translateY(-5px);
+    border-color: var(--accent);
+    box-shadow: 0 22px 40px -26px rgba(80,40,16,.4);
+  }
+  .card .glyph {
+    width: 44px; height: 44px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--cream-2); font-size: 22px;
+    margin-bottom: 18px;
+  }
+  .card h3 { font-size: 19px; font-weight: 800; }
+  .card p {
+    margin-top: 8px; font-size: 14.5px; line-height: 1.65;
+    color: var(--muted);
+  }
+
+  /* ---------- 收尾 CTA ---------- */
+  .closing {
+    text-align: center;
+    padding: 110px 0 120px;
+  }
+  .closing h2 {
+    font-size: clamp(36px, 5.4vw, 72px);
+    font-weight: 900; line-height: 1.05;
+    letter-spacing: -.03em; max-width: 14em; margin: 18px auto 0;
+  }
+  .closing h2 .accent { color: var(--accent); font-style: italic; }
+  .closing .btn { margin-top: 38px; }
+
+  /* ---------- 页脚 ---------- */
+  footer {
+    border-top: 1px solid var(--line);
+    padding: 30px 0;
+  }
+  footer .wrap {
+    display: flex; justify-content: space-between;
+    align-items: center; flex-wrap: wrap; gap: 12px;
+    font-size: 12px; color: var(--faint);
+  }
+
+  /* ---------- 响应式 ---------- */
+  @media (max-width: 860px) {
+    .wrap { padding: 0 22px; }
+    .hero { padding: 56px 0 70px; }
+    .hero .wrap { grid-template-columns: 1fr; gap: 48px; }
+    .vinyl-stage { order: -1; }
+    .features { grid-template-columns: 1fr; }
+    .step { grid-template-columns: 64px 1fr; gap: 20px; }
+    .step .num { font-size: 40px; }
+    section { padding: 70px 0; }
+  }
+
+  /* 尊重「减少动态效果」偏好 */
+  @media (prefers-reduced-motion: reduce) {
+    *, body::before { animation: none !important; }
+    .reveal { opacity: 1; transform: none; transition: none; }
+    html { scroll-behavior: auto; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="brand">MOODTUNE <i>— Side A</i></span>
+    <a class="nav-cta" href="/mood-input">Try it</a>
+  </div>
+</header>
+
+<!-- ===== Hero ===== -->
+<section class="hero">
+  <div class="wrap">
+    <div class="hero-copy">
+      <p class="eyebrow">An AI music recommender</p>
+      <h1>Turn how<br>you feel into<br>a <span class="accent">record.</span></h1>
+      <p class="lede">
+        MoodTune reads your mood — the words, the weather, the colour of
+        your evening — and an AI DJ presses three songs onto a record,
+        just for tonight.
+      </p>
+      <div class="hero-actions">
+        <a class="btn" href="/mood-input"><span class="dot"></span>Set your mood</a>
+        <a class="ghost-link" href="#how">See how it works</a>
+      </div>
+    </div>
+    <div class="vinyl-stage">
+      <div class="vinyl-float">
+        <div class="vinyl">
+          <div class="vinyl-label">
+            <span>MOODTUNE</span>
+            <span class="vinyl-hole"></span>
+            <span class="lbl-b">SIDE A</span>
+          </div>
+        </div>
+        <div class="vinyl-gloss"></div>
+      </div>
+      <div class="tonearm"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Manifesto ===== -->
+<div class="manifesto reveal">
+  <div class="wrap">
+    <p>Tonight, what does your mood <span class="accent">sound like?</span></p>
+  </div>
+</div>
+
+<!-- ===== How it works ===== -->
+<section id="how">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <p class="eyebrow">How it works</p>
+      <h2>Three steps, <em>one record.</em></h2>
+    </div>
+    <div class="steps">
+      <div class="step reveal">
+        <div class="num">01</div>
+        <div>
+          <h3>Tell it how you feel</h3>
+          <p>
+            Tap a few moods, type a sentence, pick a colour and the
+            weather inside you — even drop a photo of the moment.
+            However the evening sits with you, MoodTune is listening.
+          </p>
+        </div>
+      </div>
+      <div class="step reveal">
+        <div class="num">02</div>
+        <div>
+          <h3>An AI DJ reads the room</h3>
+          <p>
+            Not a chart-chasing algorithm — a DJ that actually listens,
+            then reaches for three songs across any genre, mainstream or
+            obscure, chosen for this exact moment and nothing else.
+          </p>
+        </div>
+      </div>
+      <div class="step reveal">
+        <div class="num">03</div>
+        <div>
+          <h3>Press play, then look back</h3>
+          <p>
+            A hand-drawn vinyl spins your set, its edge rippling as it
+            turns. Every mood you log is pressed onto a calendar —
+            revisit any night, or replay a whole month.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Features ===== -->
+<section>
+  <div class="wrap">
+    <div class="section-head reveal">
+      <p class="eyebrow">What's inside</p>
+      <h2>A small, quiet <em>music room.</em></h2>
+    </div>
+    <div class="features">
+      <div class="card reveal">
+        <div class="glyph">🎧</div>
+        <h3>The AI DJ</h3>
+        <p>
+          Three songs, any genre, picked for the mood and nothing else —
+          no Top 50 pressure, no filler.
+        </p>
+      </div>
+      <div class="card reveal">
+        <div class="glyph">🌀</div>
+        <h3>The record player</h3>
+        <p>
+          A liquid, hand-drawn vinyl that actually plays — the cover
+          rippling at the edge as the disc turns.
+        </p>
+      </div>
+      <div class="card reveal">
+        <div class="glyph">🗓️</div>
+        <h3>Your mood calendar</h3>
+        <p>
+          Every evening you logged, an album cover pressed onto the day.
+          Tap one to spin that night again.
+        </p>
+      </div>
+      <div class="card reveal">
+        <div class="glyph">📼</div>
+        <h3>Monthly recap</h3>
+        <p>
+          A month of feelings mixed down to one side of a record — your
+          moods, your songs, counted up.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Closing ===== -->
+<section class="closing reveal">
+  <div class="wrap">
+    <p class="eyebrow">For those who outgrew the playlist</p>
+    <h2>Some nights don't need a playlist.<br>They need <span class="accent">one record.</span></h2>
+    <a class="btn" href="/mood-input"><span class="dot"></span>Set your mood</a>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span>MoodTune — AI music for how you feel</span>
+    <span>Side A · an AI music recommender</span>
+  </div>
+</footer>
+
+<script>
+  /* 滚动浮现 —— 元素进入视口时加 .in 触发 CSS 过渡 */
+  (function () {
+    var els = document.querySelectorAll('.reveal');
+    if (!('IntersectionObserver' in window)) {
+      els.forEach(function (el) { el.classList.add('in'); });
+      return;
+    }
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) {
+          e.target.classList.add('in');
+          io.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.16 });
+    els.forEach(function (el) { io.observe(el); });
+  })();
+</script>
+
+</body>
+</html>

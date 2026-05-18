@@ -26,6 +26,7 @@ import {
   type ReactNode,
 } from "react";
 import { useMoodSession } from "@/components/mood-session-provider";
+import { updateLatestSessionCover } from "@/lib/history";
 import { YouTubePlaybackEngine } from "@/lib/playback/youtube-engine";
 import type { YouTubeCandidate } from "@/lib/youtube/client";
 import type { YouTubeSearchResponse } from "@/app/api/youtube/search/route";
@@ -71,6 +72,8 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
   // 当前曲目的候选列表 + 正在用第几个
   const candidatesRef = useRef<YouTubeCandidate[]>([]);
   const candidateIdxRef = useRef(0);
+  // 新一组推荐后,下一次解析成功时把头号曲的封面回填进历史记录
+  const captureCoverRef = useRef(false);
 
   const active = recommendations[activeIndex] ?? null;
   // 当前曲目引用 —— 异步解析回来后用它判断是否已切歌
@@ -91,7 +94,10 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (recommendations !== prevRecsRef.current) {
       prevRecsRef.current = recommendations;
-      if (recommendations.length > 0) wantPlayRef.current = true;
+      if (recommendations.length > 0) {
+        wantPlayRef.current = true;
+        captureCoverRef.current = true;
+      }
     }
   });
 
@@ -184,6 +190,13 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
         return;
       }
       candidatesRef.current = candidates;
+      // 新一组推荐的头号曲解析成功 → 把封面回填进历史日历
+      if (captureCoverRef.current) {
+        captureCoverRef.current = false;
+        if (candidates[0]?.thumbnailUrl) {
+          updateLatestSessionCover(candidates[0].thumbnailUrl);
+        }
+      }
       if (forcePlay) wantPlayRef.current = true;
       playCandidate(0);
     },
