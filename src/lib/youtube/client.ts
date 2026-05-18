@@ -21,10 +21,6 @@ export interface YouTubeMatch {
   videoId: string;
   /** 视频缩略图 —— Topic 频道的即专辑封面 */
   thumbnailUrl: string;
-  /** 命中「歌手 - Topic」官方频道时给出规范歌名,否则 null */
-  canonicalTitle: string | null;
-  /** 命中「歌手 - Topic」官方频道时给出规范歌手名,否则 null */
-  canonicalArtist: string | null;
 }
 
 /** 是否已配置 API key */
@@ -49,13 +45,6 @@ function coverage(want: string[], have: string[]): number {
   if (want.length === 0) return 0;
   const set = new Set(have);
   return want.filter((t) => set.has(t)).length / want.length;
-}
-
-/** Topic 上传标题通常已很干净 —— 去掉结尾的 (Official Audio) 等修饰 */
-function cleanTitle(t: string): string {
-  return t
-    .replace(/\s*[([][^)\]]*\b(audio|official|video|mv|m\/v)\b[^)\]]*[)\]]\s*$/i, "")
-    .trim();
 }
 
 interface RawSearchItem {
@@ -129,27 +118,17 @@ export async function searchYouTubeVideo(
 
   if (!best?.id?.videoId) return null;
 
-  const channel = best.snippet?.channelTitle ?? "";
-  const isTopic = /-\s*topic$/i.test(channel);
   const thumbs = best.snippet?.thumbnails;
   return {
     videoId: best.id.videoId,
     thumbnailUrl:
       thumbs?.high?.url ?? thumbs?.medium?.url ?? thumbs?.default?.url ?? "",
-    canonicalTitle: isTopic
-      ? cleanTitle(best.snippet?.title ?? "") || null
-      : null,
-    canonicalArtist: isTopic
-      ? channel.replace(/\s*-\s*topic\s*$/i, "").trim() || null
-      : null,
   };
 }
 
 /**
- * 批量解析一组 GLM 推荐:
- *  - 给每首附上可播放的 youtubeId 与封面(视频缩略图);
- *  - 命中官方音频频道时,用规范歌名/歌手覆盖 GLM 的输出。
- * 单首失败不影响其他首。
+ * 批量为一组 GLM 推荐附上可播放的 youtubeId 与封面(视频缩略图)。
+ * 只补充播放信息,不改动 GLM 给的歌名/歌手。单首失败不影响其他首。
  */
 export async function resolveRecommendationsWithYouTube(
   recommendations: Recommendation[],
@@ -162,8 +141,6 @@ export async function resolveRecommendationsWithYouTube(
         if (!match) return rec;
         return {
           ...rec,
-          title: match.canonicalTitle ?? rec.title,
-          artist: match.canonicalArtist ?? rec.artist,
           youtubeId: match.videoId,
           albumArt: match.thumbnailUrl || null,
         };

@@ -249,7 +249,7 @@ export function Vinyl({
       turbRef.current?.setAttribute("baseFrequency", `${fx} ${fy}`);
       dispRef.current?.setAttribute(
         "scale",
-        `${12 + Math.sin(elapsed * 0.8) * 5}`,
+        `${28 + Math.sin(elapsed * 0.8) * 12}`,
       );
       raf = requestAnimationFrame(tick);
     };
@@ -301,7 +301,7 @@ export function Vinyl({
               ref={dispRef}
               in="SourceGraphic"
               in2="turb"
-              scale={12}
+              scale={28}
             />
           </filter>
         </defs>
@@ -348,9 +348,9 @@ export function Vinyl({
               style={{
                 filter: `url(#${liquidId})`,
                 maskImage:
-                  "radial-gradient(circle, transparent 60%, #000 88%)",
+                  "radial-gradient(circle, transparent 40%, #000 70%)",
                 WebkitMaskImage:
-                  "radial-gradient(circle, transparent 60%, #000 88%)",
+                  "radial-gradient(circle, transparent 40%, #000 70%)",
               }}
             >
               {coverInner}
