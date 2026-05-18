@@ -37,10 +37,6 @@ export interface Recommendation {
   artist: string;
   note: string;
   moodTag: string;
-  /** 可播放的 YouTube 视频 ID —— 由 /api/recommend 解析时附上 */
-  youtubeId?: string | null;
-  /** 专辑封面 URL（匹配视频的缩略图）；为空时 UI 用 <BrandCover /> 占位 */
-  albumArt?: string | null;
 }
 
 /**

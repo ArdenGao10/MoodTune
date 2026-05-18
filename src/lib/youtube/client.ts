@@ -13,8 +13,6 @@
  * 配额提醒:search.list 每次 100 单位,免费额度 10000/天 ≈ 100 次/天。
  */
 
-import type { Recommendation } from "@/lib/types";
-
 const SEARCH_URL = "https://www.googleapis.com/youtube/v3/search";
 
 export interface YouTubeMatch {
@@ -124,30 +122,4 @@ export async function searchYouTubeVideo(
     thumbnailUrl:
       thumbs?.high?.url ?? thumbs?.medium?.url ?? thumbs?.default?.url ?? "",
   };
-}
-
-/**
- * 批量为一组 GLM 推荐附上可播放的 youtubeId 与封面(视频缩略图)。
- * 只补充播放信息,不改动 GLM 给的歌名/歌手。单首失败不影响其他首。
- */
-export async function resolveRecommendationsWithYouTube(
-  recommendations: Recommendation[],
-): Promise<Recommendation[]> {
-  if (!isYouTubeConfigured()) return recommendations;
-  return Promise.all(
-    recommendations.map(async (rec) => {
-      try {
-        const match = await searchYouTubeVideo(`${rec.title} ${rec.artist}`);
-        if (!match) return rec;
-        return {
-          ...rec,
-          youtubeId: match.videoId,
-          albumArt: match.thumbnailUrl || null,
-        };
-      } catch (error) {
-        console.warn("youtube: resolve failed for", rec.title, error);
-        return rec;
-      }
-    }),
-  );
 }

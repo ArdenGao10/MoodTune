@@ -14,7 +14,6 @@ import { MODELS, parseJsonRobust, zhipu } from "@/lib/zhipu";
 import { DJ_SYSTEM_PROMPT, buildUserText } from "@/lib/dj-prompt";
 import { getCurrentToken } from "@/lib/spotify/auth";
 import { matchRecommendationsToTracks } from "@/lib/spotify/match";
-import { resolveRecommendationsWithYouTube } from "@/lib/youtube/client";
 import type {
   Recommendation,
   RecommendRequest,
@@ -87,14 +86,6 @@ export async function POST(
       // 调用 / JSON 解析失败 —— 重试一次
       console.warn("recommend: first attempt failed, retrying", firstError);
       recommendations = await callZhipu();
-    }
-
-    // 用 YouTube 解析每首歌：附上可播放的 youtubeId 与专辑封面，
-    // 并在命中官方音频频道时校正歌名/歌手。失败时原样返回。
-    try {
-      recommendations = await resolveRecommendationsWithYouTube(recommendations);
-    } catch (resolveError) {
-      console.warn("recommend: youtube resolution failed", resolveError);
     }
 
     // 已登录 → 匹配 Spotify，附带统一 Track[]（Real Mode）
