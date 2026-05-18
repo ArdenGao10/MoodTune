@@ -16,6 +16,7 @@ import {
   type ReactNode,
 } from "react";
 import { useWeather } from "./weather-provider";
+import { saveSession } from "@/lib/history";
 import type {
   MoodInput,
   Recommendation,
@@ -82,6 +83,8 @@ export function MoodSessionProvider({ children }: { children: ReactNode }) {
           setRecommendations(data.recommendations);
           setActiveIndex(0);
           setStatus("done");
+          // 成功一次推荐 → 存进收听历史(localStorage)
+          saveSession(input, data.recommendations);
         })
         .catch((err: unknown) => {
           setError(
