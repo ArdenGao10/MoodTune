@@ -3,14 +3,14 @@
 /*
  * PlaybackContext —— 播放控制层。
  *
- * 把「当前推荐曲目」交给播放引擎实际播放,并向播放器 UI 暴露统一的
- * 播放态(isPlaying / 进度 / 专辑封面)和操作(toggle / next / prev / seek)。
+ * 向播放器 UI 暴露统一的播放态(isPlaying / 进度)和操作
+ * (toggle / next / prev / seek)。
  *
- * 数据来源:从 MoodSession 读 recommendations + activeIndex。
- * 引擎:YouTubePlaybackEngine —— 每首歌按「歌名 歌手」经 /api/youtube/search
- * 解析出 videoId 再播放;同一接口还返回视频缩略图,用作专辑封面
- * (匹配到的视频就是正在播放的音频,封面与音频天然一致)。
- * 解析结果在内存里缓存,避免重复消耗 API 配额。
+ * 数据来源:从 MoodSession 读 recommendations + activeIndex。每首推荐已由
+ * /api/recommend 预先解析好 youtubeId(见 lib/youtube),这里直接交给
+ * YouTubePlaybackEngine 播放 —— 不再在客户端查询。
+ *
+ * 自动播放:新一组推荐到达时(进入推荐页),自动开始播放第一首。
  */
 
 import {
@@ -25,15 +25,9 @@ import {
 } from "react";
 import { useMoodSession } from "@/components/mood-session-provider";
 import { YouTubePlaybackEngine } from "@/lib/playback/youtube-engine";
-import type { YouTubeSearchResponse } from "@/app/api/youtube/search/route";
 
-/** 当前曲目在播放引擎上的解析状态 */
-export type PlaybackStatus = "idle" | "resolving" | "ready" | "error";
-
-interface ResolvedTrack {
-  videoId: string;
-  thumbnailUrl: string;
-}
+/** 当前曲目的播放状态 */
+export type PlaybackStatus = "idle" | "ready" | "error";
 
 interface PlaybackContextValue {
   isPlaying: boolean;
@@ -42,8 +36,6 @@ interface PlaybackContextValue {
   /** 当前曲目总时长(秒);未知时为 0 */
   durationSec: number;
   status: PlaybackStatus;
-  /** 当前曲目的专辑封面(取自匹配到的 YouTube 视频);未解析到时为 null */
-  albumArtUrl: string | null;
   /** 播放 / 暂停 */
   toggle: () => void;
   /** 下一首 */
@@ -63,24 +55,30 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
   const [positionSec, setPositionSec] = useState(0);
   const [durationSec, setDurationSec] = useState(0);
   const [status, setStatus] = useState<PlaybackStatus>("idle");
-  const [albumArtUrl, setAlbumArtUrl] = useState<string | null>(null);
 
   const engineRef = useRef<YouTubePlaybackEngine | null>(null);
-  // 「歌名 歌手」→ 解析结果(null 表示搜过但没结果),缓存省配额
-  const cacheRef = useRef<Map<string, ResolvedTrack | null>>(new Map());
   // 用户是否「想要播放」—— 切歌时据此决定继续播放还是仅 cue
   const wantPlayRef = useRef(false);
 
   const active = recommendations[activeIndex] ?? null;
-  // 当前曲目引用 —— 异步解析回来后用它判断是否已切歌
+  // 当前曲目引用 —— 异步回调里用它判断是否已切歌
   const activeRef = useRef(active);
   // 引擎结束回调要调用「最新」的 next —— 用 ref 中转
   const nextRef = useRef<() => void>(() => {});
+  // 上一次的 recommendations 引用 —— 用于识别「新一组推荐」
+  const prevRecsRef = useRef(recommendations);
 
-  // 保持 activeRef 同步(在 effect 里更新,不在 render 期间写 ref)。
-  // 声明在 loadActive 的 effect 之前 —— effect 按声明顺序执行。
+  // 同步 activeRef(在 effect 里更新,不在 render 期间写 ref)
   useEffect(() => {
     activeRef.current = active;
+  });
+
+  // 新一组推荐到达 → 置「想要播放」,使首曲自动播放
+  useEffect(() => {
+    if (recommendations !== prevRecsRef.current) {
+      prevRecsRef.current = recommendations;
+      if (recommendations.length > 0) wantPlayRef.current = true;
+    }
   });
 
   /** 懒创建播放引擎并接好回调 */
@@ -99,61 +97,34 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
     return engineRef.current;
   }, []);
 
-  /** 把「歌名 歌手」解析成 videoId + 封面(带缓存) */
-  const resolveTrack = useCallback(
-    async (title: string, artist: string): Promise<ResolvedTrack | null> => {
-      const q = `${title} ${artist}`.trim();
-      const cache = cacheRef.current;
-      if (cache.has(q)) return cache.get(q) ?? null;
-      try {
-        const res = await fetch(
-          `/api/youtube/search?q=${encodeURIComponent(q)}`,
-        );
-        const data = (await res.json()) as YouTubeSearchResponse;
-        const resolved: ResolvedTrack | null = data.videoId
-          ? { videoId: data.videoId, thumbnailUrl: data.thumbnailUrl ?? "" }
-          : null;
-        cache.set(q, resolved);
-        return resolved;
-      } catch {
-        return null;
-      }
-    },
-    [],
-  );
-
-  /** 解析当前曲目并 cue(或直接播放) */
+  /** 加载当前曲目并 cue(或直接播放) */
   const loadActive = useCallback(
-    async (forcePlay: boolean) => {
+    (forcePlay: boolean) => {
       const a = activeRef.current;
       if (!a) return;
-      setStatus("resolving");
       setPositionSec(0);
       setDurationSec(0);
-      setAlbumArtUrl(null);
-      const resolved = await resolveTrack(a.title, a.artist);
-      if (a !== activeRef.current) return; // 解析期间已切歌,作废
-      if (!resolved) {
+      if (!a.youtubeId) {
+        // /api/recommend 没能解析出可播放视频
         setStatus("error");
         return;
       }
       setStatus("ready");
-      setAlbumArtUrl(resolved.thumbnailUrl || null);
       const engine = getEngine();
       if (forcePlay || wantPlayRef.current) {
-        void engine.loadAndPlay(resolved.videoId);
+        void engine.loadAndPlay(a.youtubeId);
       } else {
-        void engine.cue(resolved.videoId);
+        void engine.cue(a.youtubeId);
       }
     },
-    [resolveTrack, getEngine],
+    [getEngine],
   );
 
-  // 活动曲目变化 → 重新解析(标题+歌手唯一确定一首)
+  // 活动曲目变化 → 重新加载
   useEffect(() => {
-    if (active) void loadActive(false);
+    if (active) loadActive(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [active?.title, active?.artist]);
+  }, [active?.youtubeId, activeIndex]);
 
   const next = useCallback(() => {
     const len = recommendations.length;
@@ -177,10 +148,9 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
       wantPlayRef.current = true;
       if (status === "ready") {
         getEngine().play();
-      } else if (status === "error" || status === "idle") {
-        void loadActive(true);
+      } else {
+        loadActive(true);
       }
-      // status === "resolving":wantPlayRef 已置位,解析完成后会自动播放
     }
   }, [isPlaying, status, loadActive, getEngine]);
 
@@ -208,23 +178,12 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
       positionSec,
       durationSec,
       status,
-      albumArtUrl,
       toggle,
       next,
       prev,
       seekFraction,
     }),
-    [
-      isPlaying,
-      positionSec,
-      durationSec,
-      status,
-      albumArtUrl,
-      toggle,
-      next,
-      prev,
-      seekFraction,
-    ],
+    [isPlaying, positionSec, durationSec, status, toggle, next, prev, seekFraction],
   );
 
   return (

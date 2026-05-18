@@ -259,6 +259,21 @@ export function Vinyl({
 
   const playState = isPlaying ? "running" : "paused";
 
+  // 中心封面内容 —— 有 albumArtUrl 用真实封面，否则用站点固定的 <BrandCover />。
+  // 会被渲染两次（锐利底层 + 液态外环层）。
+  const coverInner = albumArtUrl ? (
+    <div
+      className="h-full w-full"
+      style={{
+        backgroundImage: `url(${albumArtUrl})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+      }}
+    />
+  ) : (
+    <BrandCover />
+  );
+
   return (
     <div
       className={cn("relative aspect-square select-none", className)}
@@ -312,7 +327,8 @@ export function Vinyl({
             role="img"
             aria-label="Vinyl record"
           />
-          {/* 中心封面（套液态滤镜）：有 albumArtUrl 用真实封面，否则用站点固定的 <BrandCover />。 */}
+          {/* 中心封面：双层。底层锐利 —— 保证中心（人脸）不变形；
+              顶层套液态滤镜，并用径向遮罩只保留外环 —— 于是只有边缘随滤镜流动。 */}
           <div
             className="absolute overflow-hidden rounded-full"
             style={{
@@ -322,21 +338,23 @@ export function Vinyl({
               height: "52%",
               marginTop: "-26%",
               marginLeft: "-26%",
-              filter: `url(#${liquidId})`,
             }}
           >
-            {albumArtUrl ? (
-              <div
-                className="h-full w-full"
-                style={{
-                  backgroundImage: `url(${albumArtUrl})`,
-                  backgroundSize: "cover",
-                  backgroundPosition: "center",
-                }}
-              />
-            ) : (
-              <BrandCover />
-            )}
+            {/* 锐利底层 */}
+            <div className="absolute inset-0">{coverInner}</div>
+            {/* 液态外环层 —— 中心透明、外缘渐显 */}
+            <div
+              className="absolute inset-0"
+              style={{
+                filter: `url(#${liquidId})`,
+                maskImage:
+                  "radial-gradient(circle, transparent 60%, #000 88%)",
+                WebkitMaskImage:
+                  "radial-gradient(circle, transparent 60%, #000 88%)",
+              }}
+            >
+              {coverInner}
+            </div>
           </div>
         </div>
 

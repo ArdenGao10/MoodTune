@@ -5,11 +5,15 @@
  * 翻唱、或综艺片段。这里改为对前若干条结果打分:
  *  - 强烈优先「歌手名 - Topic」频道 —— YouTube 自动生成的官方音频频道,
  *    一定可嵌入、是正版音频,缩略图即专辑封面;
- *  - 惩罚标题里的 cover / instrumental / live / 综艺 等噪音;
+ *  - 惩罚标题里的 cover / instrumental / live 等噪音;
  *  - 限定音乐分类(videoCategoryId=10),排除电视/综艺片段。
+ *
+ * 命中 Topic 频道时,频道名即规范歌手名 —— 用它校正 GLM 偶尔配错的歌手。
  *
  * 配额提醒:search.list 每次 100 单位,免费额度 10000/天 ≈ 100 次/天。
  */
+
+import type { Recommendation } from "@/lib/types";
 
 const SEARCH_URL = "https://www.googleapis.com/youtube/v3/search";
 
@@ -17,6 +21,10 @@ export interface YouTubeMatch {
   videoId: string;
   /** 视频缩略图 —— Topic 频道的即专辑封面 */
   thumbnailUrl: string;
+  /** 命中「歌手 - Topic」官方频道时给出规范歌名,否则 null */
+  canonicalTitle: string | null;
+  /** 命中「歌手 - Topic」官方频道时给出规范歌手名,否则 null */
+  canonicalArtist: string | null;
 }
 
 /** 是否已配置 API key */
@@ -41,6 +49,13 @@ function coverage(want: string[], have: string[]): number {
   if (want.length === 0) return 0;
   const set = new Set(have);
   return want.filter((t) => set.has(t)).length / want.length;
+}
+
+/** Topic 上传标题通常已很干净 —— 去掉结尾的 (Official Audio) 等修饰 */
+function cleanTitle(t: string): string {
+  return t
+    .replace(/\s*[([][^)\]]*\b(audio|official|video|mv|m\/v)\b[^)\]]*[)\]]\s*$/i, "")
+    .trim();
 }
 
 interface RawSearchItem {
@@ -113,10 +128,49 @@ export async function searchYouTubeVideo(
   }
 
   if (!best?.id?.videoId) return null;
+
+  const channel = best.snippet?.channelTitle ?? "";
+  const isTopic = /-\s*topic$/i.test(channel);
   const thumbs = best.snippet?.thumbnails;
   return {
     videoId: best.id.videoId,
     thumbnailUrl:
       thumbs?.high?.url ?? thumbs?.medium?.url ?? thumbs?.default?.url ?? "",
+    canonicalTitle: isTopic
+      ? cleanTitle(best.snippet?.title ?? "") || null
+      : null,
+    canonicalArtist: isTopic
+      ? channel.replace(/\s*-\s*topic\s*$/i, "").trim() || null
+      : null,
   };
+}
+
+/**
+ * 批量解析一组 GLM 推荐:
+ *  - 给每首附上可播放的 youtubeId 与封面(视频缩略图);
+ *  - 命中官方音频频道时,用规范歌名/歌手覆盖 GLM 的输出。
+ * 单首失败不影响其他首。
+ */
+export async function resolveRecommendationsWithYouTube(
+  recommendations: Recommendation[],
+): Promise<Recommendation[]> {
+  if (!isYouTubeConfigured()) return recommendations;
+  return Promise.all(
+    recommendations.map(async (rec) => {
+      try {
+        const match = await searchYouTubeVideo(`${rec.title} ${rec.artist}`);
+        if (!match) return rec;
+        return {
+          ...rec,
+          title: match.canonicalTitle ?? rec.title,
+          artist: match.canonicalArtist ?? rec.artist,
+          youtubeId: match.videoId,
+          albumArt: match.thumbnailUrl || null,
+        };
+      } catch (error) {
+        console.warn("youtube: resolve failed for", rec.title, error);
+        return rec;
+      }
+    }),
+  );
 }

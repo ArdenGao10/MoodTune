@@ -166,7 +166,6 @@ function PlayerView({
     positionSec,
     durationSec,
     status,
-    albumArtUrl,
     toggle,
     next,
     prev,
@@ -187,7 +186,7 @@ function PlayerView({
       <section className="md:flex md:min-h-[80vh] md:items-center md:justify-center md:gap-[100px] min-[1400px]:gap-[120px]">
         <div className="mb-12 flex justify-center md:mb-0 md:shrink-0">
           <div className="w-[360px] max-w-full md:w-[480px] min-[1400px]:w-[540px]">
-            <Vinyl isPlaying={isPlaying} albumArtUrl={albumArtUrl ?? undefined} />
+            <Vinyl isPlaying={isPlaying} albumArtUrl={active.albumArt ?? undefined} />
           </div>
         </div>
 
@@ -257,12 +256,7 @@ function PlayerView({
             </ControlButton>
           </div>
 
-          {/* 播放状态提示 —— 找曲 / 找不到 */}
-          {status === "resolving" && !isPlaying && (
-            <p className="mt-3 text-center text-[12px] text-mt-muted">
-              Finding the track…
-            </p>
-          )}
+          {/* 播放状态提示 —— 找不到可播放的版本 */}
           {status === "error" && (
             <p className="mt-3 text-center text-[12px] text-mt-muted">
               Couldn&apos;t find this one to stream — skip to the next.
