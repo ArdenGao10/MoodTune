@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { WeatherProvider } from "@/components/weather-provider";
 import { MusicSourceProvider } from "@/contexts/MusicSourceContext";
 import { MoodSessionProvider } from "@/components/mood-session-provider";
+import { PlaybackProvider } from "@/contexts/PlaybackContext";
 import { TopBar } from "@/components/layout/top-bar";
 
 // 主字体 Inter，手写体 Caveat（DJ 签名 / 装饰文字）
@@ -48,11 +49,13 @@ export default function RootLayout({
           <WeatherProvider>
             <MusicSourceProvider>
             <MoodSessionProvider>
-              {/* 容器：手机 500px ｜ ≥768px 1600px */}
-              <div className="mx-auto max-w-[500px] px-6 pb-20 pt-10 md:max-w-[1600px] md:px-20">
-                <TopBar />
-                <main>{children}</main>
-              </div>
+              <PlaybackProvider>
+                {/* 容器：手机 500px ｜ ≥768px 1600px */}
+                <div className="mx-auto max-w-[500px] px-6 pb-20 pt-10 md:max-w-[1600px] md:px-20">
+                  <TopBar />
+                  <main>{children}</main>
+                </div>
+              </PlaybackProvider>
             </MoodSessionProvider>
             </MusicSourceProvider>
           </WeatherProvider>

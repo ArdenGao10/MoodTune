@@ -1,0 +1,51 @@
+/*
+ * GET /api/youtube/search?q=...　—— 把「歌名 歌手」解析成 YouTube videoId。
+ * 给 PlaybackProvider 用:它拿到 videoId 后交给 YouTube 播放引擎播放。
+ */
+
+import { NextResponse } from "next/server";
+import { isYouTubeConfigured, searchYouTubeVideo } from "@/lib/youtube/client";
+
+export const runtime = "nodejs";
+
+export interface YouTubeSearchResponse {
+  videoId: string | null;
+  title?: string | null;
+  channelTitle?: string | null;
+  error?: string;
+}
+
+export async function GET(
+  req: Request,
+): Promise<NextResponse<YouTubeSearchResponse>> {
+  const q = new URL(req.url).searchParams.get("q")?.trim();
+  if (!q) {
+    return NextResponse.json(
+      { videoId: null, error: "missing_query" },
+      { status: 400 },
+    );
+  }
+
+  if (!isYouTubeConfigured()) {
+    console.error("/api/youtube/search: YOUTUBE_API_KEY is not set");
+    return NextResponse.json(
+      { videoId: null, error: "not_configured" },
+      { status: 500 },
+    );
+  }
+
+  try {
+    const match = await searchYouTubeVideo(q);
+    return NextResponse.json({
+      videoId: match?.videoId ?? null,
+      title: match?.title ?? null,
+      channelTitle: match?.channelTitle ?? null,
+    });
+  } catch (error) {
+    console.error("/api/youtube/search failed:", error);
+    return NextResponse.json(
+      { videoId: null, error: "search_failed" },
+      { status: 502 },
+    );
+  }
+}

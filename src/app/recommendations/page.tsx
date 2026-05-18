@@ -8,7 +8,7 @@
  *  idle：直接进入（无会话）→ 引导回首页
  */
 
-import { useState, type ReactNode } from "react";
+import { type ReactNode } from "react";
 import Link from "next/link";
 import {
   Pause,
@@ -22,20 +22,30 @@ import { Vinyl } from "@/components/vinyl";
 import { RoughButton } from "@/components/rough-button";
 import { WaveProgressBar } from "@/components/wave-progress-bar";
 import { useMoodSession } from "@/components/mood-session-provider";
+import { usePlayback } from "@/contexts/PlaybackContext";
 import type { Recommendation } from "@/lib/types";
+
+/** 秒 → m:ss */
+function formatTime(totalSeconds: number): string {
+  const s = Math.max(0, Math.floor(totalSeconds));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+}
 
 // 透明描边的次级控件按钮
 function ControlButton({
   label,
+  onClick,
   children,
 }: {
   label: string;
+  onClick?: () => void;
   children: ReactNode;
 }) {
   return (
     <button
       type="button"
       aria-label={label}
+      onClick={onClick}
       className="flex size-11 items-center justify-center text-mt-muted transition-colors hover:text-mt-fg"
     >
       {children}
@@ -151,8 +161,18 @@ function PlayerView({
   activeIndex: number;
   setActiveIndex: (index: number) => void;
 }) {
-  const [isPlaying, setIsPlaying] = useState(true);
+  const {
+    isPlaying,
+    positionSec,
+    durationSec,
+    status,
+    toggle,
+    next,
+    prev,
+    seekFraction,
+  } = usePlayback();
   const active = recommendations[activeIndex];
+  const progress = durationSec > 0 ? positionSec / durationSec : 0;
   const rest = recommendations
     .map((rec, index) => ({ rec, index }))
     .filter((entry) => entry.index !== activeIndex);
@@ -192,21 +212,35 @@ function PlayerView({
           </div>
 
           <div className="my-5 md:my-7">
-            <WaveProgressBar progress={0} currentTime="0:00" totalTime="--:--" />
+            <button
+              type="button"
+              aria-label="Seek"
+              className="block w-full"
+              onClick={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                seekFraction((e.clientX - rect.left) / rect.width);
+              }}
+            >
+              <WaveProgressBar
+                progress={progress}
+                currentTime={formatTime(positionSec)}
+                totalTime={durationSec > 0 ? formatTime(durationSec) : "--:--"}
+              />
+            </button>
           </div>
 
           <div className="mt-4 flex items-center justify-between md:justify-center md:gap-7">
             <ControlButton label="Shuffle">
               <Shuffle className="size-5" strokeWidth={1.6} />
             </ControlButton>
-            <ControlButton label="Previous track">
+            <ControlButton label="Previous track" onClick={prev}>
               <SkipBack className="size-5" strokeWidth={1.6} />
             </ControlButton>
             <RoughButton
               variant="solid"
               size={64}
               aria-label={isPlaying ? "Pause" : "Play"}
-              onClick={() => setIsPlaying((p) => !p)}
+              onClick={toggle}
             >
               {isPlaying ? (
                 <Pause className="size-5 fill-current" />
@@ -214,13 +248,25 @@ function PlayerView({
                 <Play className="size-5 fill-current" />
               )}
             </RoughButton>
-            <ControlButton label="Next track">
+            <ControlButton label="Next track" onClick={next}>
               <SkipForward className="size-5" strokeWidth={1.6} />
             </ControlButton>
             <ControlButton label="Repeat">
               <Repeat className="size-5" strokeWidth={1.6} />
             </ControlButton>
           </div>
+
+          {/* 播放状态提示 —— 找曲 / 找不到 */}
+          {status === "resolving" && !isPlaying && (
+            <p className="mt-3 text-center text-[12px] text-mt-muted">
+              Finding the track…
+            </p>
+          )}
+          {status === "error" && (
+            <p className="mt-3 text-center text-[12px] text-mt-muted">
+              Couldn&apos;t find this one to stream — skip to the next.
+            </p>
+          )}
         </div>
       </section>
 
