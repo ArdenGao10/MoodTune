@@ -199,14 +199,14 @@ export default function HistoryPage() {
                     {/* 小唱片：刻纹圆盘 + 中心专辑封面 */}
                     <span
                       aria-hidden="true"
-                      className="absolute inset-[13%] rounded-full shadow-[inset_0_0_10px_rgba(0,0,0,0.55)] transition-transform duration-300 group-hover:scale-[1.06]"
+                      className="absolute inset-[6%] rounded-full shadow-[inset_0_0_12px_rgba(0,0,0,0.55)] transition-transform duration-300 group-hover:scale-[1.05]"
                       style={{
                         background:
                           "repeating-radial-gradient(circle, #0d0a07 0 1px, #1c150e 1px 3px)",
                       }}
                     >
                       <span
-                        className="absolute inset-[30%] rounded-full bg-cover bg-center"
+                        className="absolute inset-[27%] rounded-full bg-cover bg-center"
                         style={
                           cover
                             ? { backgroundImage: `url(${cover})` }
@@ -217,7 +217,7 @@ export default function HistoryPage() {
                         }
                       />
                     </span>
-                    <span className="absolute left-1.5 top-1 text-[11px] font-medium tabular-nums text-mt-fg">
+                    <span className="absolute left-1.5 top-1 text-[11px] font-medium tabular-nums text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.7)]">
                       {day}
                     </span>
                   </>
