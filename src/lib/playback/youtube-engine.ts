@@ -110,7 +110,9 @@ export class YouTubePlaybackEngine implements PlaybackEngine {
       this.container = container;
 
       await new Promise<void>((resolve) => {
-        this.player = new window.YT!.Player(mount, {
+        // YT.Player 的方法(playVideo 等)要到 onReady 才可用 —— 在 onReady
+        // 里才把实例挂到 this.player,保证「this.player 非空 == 已就绪」。
+        const player = new window.YT!.Player(mount, {
           playerVars: {
             autoplay: 0,
             controls: 0,
@@ -122,7 +124,10 @@ export class YouTubePlaybackEngine implements PlaybackEngine {
             origin: window.location.origin,
           },
           events: {
-            onReady: () => resolve(),
+            onReady: () => {
+              this.player = player;
+              resolve();
+            },
             onStateChange: (e) => this.handleStateChange(e.data),
             onError: (e) => this.onError(e.data),
           },
