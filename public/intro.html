@@ -167,21 +167,31 @@
       rgba(255,255,255,.14) 0%, transparent 32%,
       transparent 64%, rgba(255,255,255,.07) 100%);
   }
+  /* 唱臂 —— 从唱片右上边缘压下,针头停在标签外缘 */
   .tonearm {
-    position: absolute; top: -2%; right: -4%;
-    width: 50%; height: 5px;
-    transform-origin: right center; transform: rotate(30deg);
+    position: absolute; top: 14%; right: 16%;
+    width: 31%; height: 5px;
+    transform-origin: right center; transform: rotate(-42deg);
+    z-index: 3;
   }
   .tonearm::before {
     content: ""; position: absolute; inset: 0;
     background: linear-gradient(var(--ink), #5a4636);
     border-radius: 5px;
   }
+  /* 右端转轴 —— 压在唱片上 */
   .tonearm::after {
-    content: ""; position: absolute; right: -8px; top: -7px;
-    width: 18px; height: 18px; border-radius: 50%;
+    content: ""; position: absolute; right: -9px; top: -8px;
+    width: 20px; height: 20px; border-radius: 50%;
     background: var(--ink);
-    box-shadow: 0 4px 9px rgba(0,0,0,.3);
+    box-shadow: 0 4px 10px rgba(0,0,0,.35);
+  }
+  /* 左端唱头 —— 反向旋转抵消,保持垂直压在盘面上 */
+  .tonearm .arm-head {
+    position: absolute; left: -5px; top: -3.5px;
+    width: 13px; height: 12px; border-radius: 3px;
+    background: var(--ink);
+    transform: rotate(42deg);
   }
 
   .cover h1 {
@@ -339,50 +349,60 @@
   }
 
   /* ═══════════════ 浏览器窗口框 ═══════════════ */
-  .shot-grid {
+  .shots {
     position: relative; z-index: 1;
-    display: grid; grid-template-columns: 1fr 1fr;
-    gap: 16px;
+    display: flex; flex-direction: column; gap: 26px;
   }
+  .shot { width: 100%; max-width: 600px; margin: 0 auto; }
   .browser {
     border: 1px solid var(--line);
-    border-radius: 11px; overflow: hidden;
+    border-radius: 12px; overflow: hidden;
     background: var(--paper-2);
-    box-shadow: 0 18px 36px -24px rgba(40,18,6,.55);
+    box-shadow: 0 20px 40px -24px rgba(40,18,6,.55);
     transition: transform .25s, box-shadow .25s;
   }
   .shot:hover .browser {
-    transform: translateY(-4px);
-    box-shadow: 0 26px 46px -24px rgba(40,18,6,.6);
+    transform: translateY(-5px);
+    box-shadow: 0 30px 52px -24px rgba(40,18,6,.6);
   }
   .browser .bar {
     display: flex; align-items: center; gap: 6px;
-    height: 28px; padding: 0 12px;
+    height: 32px; padding: 0 14px;
     background: var(--paper-2);
     border-bottom: 1px solid var(--line);
   }
   .browser .dot {
-    width: 8px; height: 8px; border-radius: 50%; flex: none;
+    width: 9px; height: 9px; border-radius: 50%; flex: none;
   }
   .browser .dot.r { background: #D9694A; }
   .browser .dot.y { background: #D9A93C; }
   .browser .dot.g { background: #6FA177; }
   .browser .url {
     margin-left: 10px;
-    font-family: var(--mono); font-size: 9px;
+    font-family: var(--mono); font-size: 9.5px;
     letter-spacing: .04em; color: var(--muted);
     background: rgba(0,0,0,.05);
-    padding: 3px 12px; border-radius: 999px;
+    padding: 4px 14px; border-radius: 999px;
   }
   .browser img { display: block; width: 100%; }
-  .caption { margin-top: 11px; }
-  .caption .cap-name { font-size: 14px; font-weight: 800; }
+  .caption { margin-top: 13px; }
+  .caption .cap-name { font-size: 15px; font-weight: 800; }
   .caption .cap-desc {
-    margin-top: 3px;
-    font-family: var(--mono); font-size: 9.5px;
+    margin-top: 4px;
+    font-family: var(--mono); font-size: 10px;
     letter-spacing: .1em; color: var(--muted);
   }
-  .shot.hero { margin-bottom: 22px; }
+
+  /* ═══════════════ 收尾 ═══════════════ */
+  .closing {
+    position: relative; z-index: 1;
+    text-align: center; margin-top: 46px;
+  }
+  .closing .mono { display: block; margin-bottom: 16px; }
+  .closing .closing-line {
+    font-size: 30px; font-weight: 800;
+    line-height: 1.42; letter-spacing: .01em;
+  }
 
   /* ═══════════════ 导出 PDF 按钮 ═══════════════ */
   .pdf-btn {
@@ -445,7 +465,7 @@
         </div>
       </div>
       <div class="vinyl-gloss"></div>
-      <div class="tonearm"></div>
+      <div class="tonearm"><span class="arm-head"></span></div>
     </div>
     <h1 class="reveal">MoodTune</h1>
     <div class="subtitle reveal">把此刻的心情，压成一张<span class="accent">唱片</span></div>
@@ -614,29 +634,27 @@
 
 </div>
 
-<!-- ════════════ 第 4 页 · 产品截图 ════════════ -->
+<!-- ════════════ 第 4 页 · 产品截图 一 ════════════ -->
 <div class="page">
   <div class="section-head reveal">
     <div class="label">PRODUCT SHOTS · 产品截图</div>
     <div class="title">走进这间<span class="accent">音乐房间</span></div>
-    <div class="sub">深夜唱片店的暖色 · 孤独感 · 编辑式排版</div>
   </div>
 
-  <div class="shot hero reveal">
-    <div class="browser">
-      <div class="bar">
-        <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
-        <span class="url">moodtune.app / recommendations</span>
+  <div class="shots">
+    <div class="shot reveal">
+      <div class="browser">
+        <div class="bar">
+          <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+          <span class="url">moodtune.app / recommendations</span>
+        </div>
+        <img src="screenshots/recommendations.png" alt="唱片播放器" />
       </div>
-      <img src="screenshots/recommendations.png" alt="唱片播放器" />
+      <div class="caption">
+        <div class="cap-name">唱片播放器</div>
+        <div class="cap-desc">PLAYER · 推荐到达即自动播放,封面边缘随转动流动</div>
+      </div>
     </div>
-    <div class="caption">
-      <div class="cap-name">唱片播放器</div>
-      <div class="cap-desc">PLAYER · 推荐到达即自动播放,封面边缘随转动流动</div>
-    </div>
-  </div>
-
-  <div class="shot-grid">
     <div class="shot reveal">
       <div class="browser">
         <div class="bar">
@@ -650,6 +668,17 @@
         <div class="cap-desc">HOME · 点击任意处,翻开今夜这张唱片</div>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- ════════════ 第 5 页 · 产品截图 二 ════════════ -->
+<div class="page">
+  <div class="section-head reveal">
+    <div class="label">PRODUCT SHOTS · 产品截图</div>
+    <div class="title">记录,<span class="accent">与回放</span></div>
+  </div>
+
+  <div class="shots">
     <div class="shot reveal">
       <div class="browser">
         <div class="bar">
@@ -676,6 +705,17 @@
         <div class="cap-desc">HISTORY · 每个记录的夜晚,压成一格小唱片</div>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- ════════════ 第 6 页 · 月度回顾 + 收尾 ════════════ -->
+<div class="page">
+  <div class="section-head reveal">
+    <div class="label">PRODUCT SHOTS · 产品截图</div>
+    <div class="title">一整月,<span class="accent">混成一面</span></div>
+  </div>
+
+  <div class="shots">
     <div class="shot reveal">
       <div class="browser">
         <div class="bar">
@@ -689,6 +729,11 @@
         <div class="cap-desc">RECAP · 一整月的情绪,混音成一面唱片</div>
       </div>
     </div>
+  </div>
+
+  <div class="closing reveal">
+    <span class="mono">献给那些听腻了歌单的人</span>
+    <p class="closing-line">有些夜晚不需要一张歌单。<br>它需要<span class="accent">一张唱片</span>。</p>
   </div>
 
   <div class="page-footer">
