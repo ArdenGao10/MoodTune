@@ -194,36 +194,37 @@ export default function HistoryPage() {
                   selected && "border-mt-strong",
                 )}
               >
-                {cover ? (
+                {has ? (
                   <>
-                    {/* 头号推荐曲的专辑封面 */}
+                    {/* 小唱片：刻纹圆盘 + 中心专辑封面 */}
                     <span
                       aria-hidden="true"
-                      className="absolute inset-0 bg-cover bg-center transition-transform duration-300 group-hover:scale-105"
-                      style={{ backgroundImage: `url(${cover})` }}
-                    />
-                    <span
-                      aria-hidden="true"
-                      className="absolute inset-x-0 top-0 h-2/5 bg-gradient-to-b from-black/55 to-transparent"
-                    />
-                    <span className="absolute left-1.5 top-1 text-[11px] font-medium tabular-nums text-white">
+                      className="absolute inset-[13%] rounded-full shadow-[inset_0_0_10px_rgba(0,0,0,0.55)] transition-transform duration-300 group-hover:scale-[1.06]"
+                      style={{
+                        background:
+                          "repeating-radial-gradient(circle, #0d0a07 0 1px, #1c150e 1px 3px)",
+                      }}
+                    >
+                      <span
+                        className="absolute inset-[30%] rounded-full bg-cover bg-center"
+                        style={
+                          cover
+                            ? { backgroundImage: `url(${cover})` }
+                            : {
+                                background:
+                                  "radial-gradient(circle at 38% 32%, #F3AE74, #D2703E 52%, #7a3a20)",
+                              }
+                        }
+                      />
+                    </span>
+                    <span className="absolute left-1.5 top-1 text-[11px] font-medium tabular-nums text-mt-fg">
                       {day}
                     </span>
                   </>
                 ) : (
-                  <>
-                    <span
-                      className={cn(
-                        "absolute left-1.5 top-1 text-[11px] tabular-nums",
-                        has ? "text-mt-fg" : "text-mt-faint",
-                      )}
-                    >
-                      {day}
-                    </span>
-                    {has && (
-                      <span className="absolute bottom-1.5 left-1/2 size-1.5 -translate-x-1/2 rounded-full bg-mt-fg" />
-                    )}
-                  </>
+                  <span className="absolute left-1.5 top-1 text-[11px] tabular-nums text-mt-faint">
+                    {day}
+                  </span>
                 )}
                 {selected && (
                   <span
