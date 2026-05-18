@@ -462,6 +462,17 @@
     .section-head, .meta-grid, .shot {
       page-break-inside: avoid; break-inside: avoid;
     }
+    /* Chrome 导出 PDF 时 repeating-radial-gradient 会碎成黑白斜纹 ——
+       换成单个非重复径向渐变模拟刻纹,打印可靠 */
+    .vinyl {
+      background: radial-gradient(circle at 50% 50%,
+        #1b140e 0 21%, #0d0a07 21% 23%,
+        #1b140e 23% 39%, #0d0a07 39% 41%,
+        #1b140e 41% 57%, #0d0a07 57% 59%,
+        #1b140e 59% 75%, #0d0a07 75% 77%,
+        #1b140e 77% 100%) !important;
+    }
+    .vinyl-gloss { display: none !important; }
   }
 </style>
 </head>
