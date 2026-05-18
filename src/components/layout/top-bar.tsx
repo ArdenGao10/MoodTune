@@ -6,7 +6,7 @@
  *  首页 /：左侧留白 ｜ 右侧"此刻时空"状态行 + 主题切换
  */
 
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import { IconButton } from "../ui/IconButton";
 import { NowPlayingBadge } from "../now-playing-badge";
@@ -18,6 +18,7 @@ import { HomeStatus } from "./home-status";
 
 export function TopBar() {
   const pathname = usePathname();
+  const router = useRouter();
   const isHome = pathname === "/";
 
   if (isHome) {
@@ -48,8 +49,9 @@ export function TopBar() {
       {/* 左 */}
       <div className="flex flex-1 items-center gap-3">
         <IconButton
-          ariaLabel="Add to playlist"
+          ariaLabel="Set a new mood"
           icon={<Plus className="size-4" strokeWidth={1.7} />}
+          onClick={() => router.push("/mood-input")}
         />
         <div className="hidden sm:block">
           <WeatherWidget />

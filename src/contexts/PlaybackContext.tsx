@@ -8,8 +8,9 @@
  *
  * 数据来源:从 MoodSession 读 recommendations + activeIndex。
  * 解析:某首歌成为「当前曲目」时,才按「歌名 歌手」经 /api/youtube/search
- * 解析出可播放的 videoId + 封面缩略图 —— 按需、可重试,某次失败不会让这
- * 首歌永久不可播。解析结果在内存里缓存,避免重复消耗 API 配额。
+ * 解析出一组候选视频。先播第一个候选;若引擎报错(禁止嵌入 / 地区限制 /
+ * 已下架),静默顺位换下一个候选 —— 显著减少「Couldn't find」。
+ * 解析结果在内存里缓存,避免重复消耗 API 配额。
  *
  * 自动播放:新一组推荐到达(进入推荐页)时,自动开始播放第一首。
  */
@@ -26,15 +27,11 @@ import {
 } from "react";
 import { useMoodSession } from "@/components/mood-session-provider";
 import { YouTubePlaybackEngine } from "@/lib/playback/youtube-engine";
+import type { YouTubeCandidate } from "@/lib/youtube/client";
 import type { YouTubeSearchResponse } from "@/app/api/youtube/search/route";
 
 /** 当前曲目的解析 / 播放状态 */
 export type PlaybackStatus = "idle" | "resolving" | "ready" | "error";
-
-interface ResolvedTrack {
-  videoId: string;
-  thumbnailUrl: string;
-}
 
 interface PlaybackContextValue {
   isPlaying: boolean;
@@ -67,16 +64,20 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
   const [albumArtUrl, setAlbumArtUrl] = useState<string | null>(null);
 
   const engineRef = useRef<YouTubePlaybackEngine | null>(null);
-  // 「歌名 歌手」→ 解析结果(null 表示搜过但没结果),缓存省配额
-  const cacheRef = useRef<Map<string, ResolvedTrack | null>>(new Map());
+  // 「歌名 歌手」→ 候选列表,缓存省配额(只缓存非空结果,失败可重试)
+  const cacheRef = useRef<Map<string, YouTubeCandidate[]>>(new Map());
   // 用户是否「想要播放」—— 切歌时据此决定继续播放还是仅 cue
   const wantPlayRef = useRef(false);
+  // 当前曲目的候选列表 + 正在用第几个
+  const candidatesRef = useRef<YouTubeCandidate[]>([]);
+  const candidateIdxRef = useRef(0);
 
   const active = recommendations[activeIndex] ?? null;
   // 当前曲目引用 —— 异步解析回来后用它判断是否已切歌
   const activeRef = useRef(active);
-  // 引擎结束回调要调用「最新」的 next —— 用 ref 中转
+  // 引擎回调要调用「最新」的处理函数 —— 用 ref 中转
   const nextRef = useRef<() => void>(() => {});
+  const errorRef = useRef<() => void>(() => {});
   // 上一次的 recommendations 引用 —— 用于识别「新一组推荐」
   const prevRecsRef = useRef(recommendations);
 
@@ -104,36 +105,68 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
         if (dur > 0) setDurationSec(dur);
       };
       engine.onEnded = () => nextRef.current();
-      engine.onError = () => setStatus("error");
+      engine.onError = () => errorRef.current();
       engineRef.current = engine;
     }
     return engineRef.current;
   }, []);
 
-  /** 把「歌名 歌手」解析成 videoId + 封面(带缓存) */
+  /** 播放候选列表里的第 idx 个 */
+  const playCandidate = useCallback(
+    (idx: number) => {
+      const list = candidatesRef.current;
+      if (idx < 0 || idx >= list.length) {
+        setStatus("error");
+        return;
+      }
+      candidateIdxRef.current = idx;
+      const candidate = list[idx];
+      setAlbumArtUrl(candidate.thumbnailUrl || null);
+      setStatus("ready");
+      const engine = getEngine();
+      if (wantPlayRef.current) void engine.loadAndPlay(candidate.videoId);
+      else void engine.cue(candidate.videoId);
+    },
+    [getEngine],
+  );
+
+  /** 引擎报错 → 静默换下一个候选;候选耗尽才算失败 */
+  const handleEngineError = useCallback(() => {
+    const nextIdx = candidateIdxRef.current + 1;
+    if (nextIdx < candidatesRef.current.length) {
+      playCandidate(nextIdx);
+    } else {
+      setStatus("error");
+    }
+  }, [playCandidate]);
+
+  useEffect(() => {
+    errorRef.current = handleEngineError;
+  });
+
+  /** 把「歌名 歌手」解析成候选列表(带缓存,只缓存非空结果) */
   const resolveTrack = useCallback(
-    async (title: string, artist: string): Promise<ResolvedTrack | null> => {
+    async (title: string, artist: string): Promise<YouTubeCandidate[]> => {
       const q = `${title} ${artist}`.trim();
       const cache = cacheRef.current;
-      if (cache.has(q)) return cache.get(q) ?? null;
+      const cached = cache.get(q);
+      if (cached) return cached;
       try {
         const res = await fetch(
           `/api/youtube/search?q=${encodeURIComponent(q)}`,
         );
         const data = (await res.json()) as YouTubeSearchResponse;
-        const resolved: ResolvedTrack | null = data.videoId
-          ? { videoId: data.videoId, thumbnailUrl: data.thumbnailUrl ?? "" }
-          : null;
-        cache.set(q, resolved);
-        return resolved;
+        const candidates = data.candidates ?? [];
+        if (candidates.length > 0) cache.set(q, candidates);
+        return candidates;
       } catch {
-        return null;
+        return [];
       }
     },
     [],
   );
 
-  /** 解析当前曲目并 cue(或直接播放) */
+  /** 解析当前曲目并从第一个候选开始播放 / cue */
   const loadActive = useCallback(
     async (forcePlay: boolean) => {
       const a = activeRef.current;
@@ -142,22 +175,19 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
       setPositionSec(0);
       setDurationSec(0);
       setAlbumArtUrl(null);
-      const resolved = await resolveTrack(a.title, a.artist);
+      candidatesRef.current = [];
+      candidateIdxRef.current = 0;
+      const candidates = await resolveTrack(a.title, a.artist);
       if (a !== activeRef.current) return; // 解析期间已切歌,作废
-      if (!resolved) {
+      if (candidates.length === 0) {
         setStatus("error");
         return;
       }
-      setStatus("ready");
-      setAlbumArtUrl(resolved.thumbnailUrl || null);
-      const engine = getEngine();
-      if (forcePlay || wantPlayRef.current) {
-        void engine.loadAndPlay(resolved.videoId);
-      } else {
-        void engine.cue(resolved.videoId);
-      }
+      candidatesRef.current = candidates;
+      if (forcePlay) wantPlayRef.current = true;
+      playCandidate(0);
     },
-    [resolveTrack, getEngine],
+    [resolveTrack, playCandidate],
   );
 
   // 活动曲目变化 → 重新解析(标题+歌手唯一确定一首)

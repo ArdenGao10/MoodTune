@@ -1,21 +1,22 @@
 /*
- * YouTube Data API v3 —— 把「歌名 + 歌手」解析成可嵌入播放的视频。
+ * YouTube Data API v3 —— 把「歌名 + 歌手」解析成可嵌入播放的视频候选。
  *
  * 匹配策略(关键):YouTube 搜索第一条往往是官方 MV(常禁止嵌入)、
- * 翻唱、或综艺片段。这里改为对前若干条结果打分:
- *  - 强烈优先「歌手名 - Topic」频道 —— YouTube 自动生成的官方音频频道,
- *    一定可嵌入、是正版音频,缩略图即专辑封面;
- *  - 惩罚标题里的 cover / instrumental / live 等噪音;
- *  - 限定音乐分类(videoCategoryId=10),排除电视/综艺片段。
+ * 翻唱、或综艺片段。这里:
+ *  1. 对前 15 条结果打分 —— 强烈优先「歌手名 - Topic」官方音频频道,
+ *     惩罚 cover / instrumental / live 等噪音,限定音乐分类;
+ *  2. 取打分前几名,用 videos.list 核实 status.embeddable
+ *     —— search 的 videoEmbeddable 参数并不可靠;
+ *  3. 返回多个候选(已排序)—— 播放层遇到某个放不了时可顺位换下一个,
+ *     显著减少「Couldn't find this one to stream」。
  *
- * 命中 Topic 频道时,频道名即规范歌手名 —— 用它校正 GLM 偶尔配错的歌手。
- *
- * 配额提醒:search.list 每次 100 单位,免费额度 10000/天 ≈ 100 次/天。
+ * 配额提醒:search.list 100 单位、videos.list 1 单位;免费额度 10000/天。
  */
 
 const SEARCH_URL = "https://www.googleapis.com/youtube/v3/search";
+const VIDEOS_URL = "https://www.googleapis.com/youtube/v3/videos";
 
-export interface YouTubeMatch {
+export interface YouTubeCandidate {
   videoId: string;
   /** 视频缩略图 —— Topic 频道的即专辑封面 */
   thumbnailUrl: string;
@@ -58,29 +59,72 @@ interface RawSearchItem {
   };
 }
 
+/** 给一条搜索结果打分 —— 越高越像「想要的正版音频」 */
+function scoreItem(item: RawSearchItem, queryTokens: string[]): number {
+  const channel = item.snippet?.channelTitle ?? "";
+  const videoTitle = item.snippet?.title ?? "";
+  // query 的词有多少落在「视频标题 + 频道名」里
+  let score = coverage(queryTokens, tokenize(`${videoTitle} ${channel}`));
+  if (/-\s*topic$/i.test(channel)) score += 1.5; // 官方音频频道
+  else if (/\bofficial\b/i.test(channel)) score += 0.4;
+  if (JUNK_RE.test(videoTitle)) score -= 1.5; // 翻唱 / 现场等噪音
+  return score;
+}
+
+function thumbnailOf(item: RawSearchItem): string {
+  const t = item.snippet?.thumbnails;
+  return t?.high?.url ?? t?.medium?.url ?? t?.default?.url ?? "";
+}
+
+/** 用 videos.list 查出这批 id 里哪些真的可嵌入 */
+async function fetchEmbeddableSet(
+  ids: string[],
+  key: string,
+): Promise<Set<string>> {
+  if (ids.length === 0) return new Set();
+  try {
+    const params = new URLSearchParams({
+      key,
+      part: "status",
+      id: ids.join(","),
+    });
+    const res = await fetch(`${VIDEOS_URL}?${params.toString()}`, {
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return new Set();
+    const data = (await res.json()) as {
+      items?: { id?: string; status?: { embeddable?: boolean } }[];
+    };
+    const set = new Set<string>();
+    for (const item of data.items ?? []) {
+      if (item.id && item.status?.embeddable) set.add(item.id);
+    }
+    return set;
+  } catch {
+    return new Set();
+  }
+}
+
 /**
- * 用「歌名 + 歌手」搜出最合适的可播放视频。找不到返回 null。
- * query 推荐传 `${title} ${artist}`。
+ * 用「歌名 + 歌手」搜出一组可播放的候选视频(已按匹配度排序)。
+ * 找不到返回空数组。query 推荐传 `${title} ${artist}`。
  */
-export async function searchYouTubeVideo(
+export async function searchYouTubeVideos(
   query: string,
-): Promise<YouTubeMatch | null> {
+): Promise<YouTubeCandidate[]> {
   const key = process.env.YOUTUBE_API_KEY;
   const q = query.trim();
-  if (!key || !q) return null;
+  if (!key || !q) return [];
 
   const params = new URLSearchParams({
     key,
     part: "snippet",
     type: "video",
-    // 只要可嵌入网页播放的 —— 直接排除禁止嵌入的官方 MV
     videoEmbeddable: "true",
-    // 限定「音乐」分类 —— 排除综艺 / 电视片段
-    videoCategoryId: "10",
+    videoCategoryId: "10", // 音乐分类
     maxResults: "15",
     q,
   });
-
   const res = await fetch(`${SEARCH_URL}?${params.toString()}`, {
     signal: AbortSignal.timeout(10000),
   });
@@ -90,36 +134,37 @@ export async function searchYouTubeVideo(
   }
 
   const data = (await res.json()) as { items?: RawSearchItem[] };
-  const items = data.items ?? [];
   const queryTokens = tokenize(q);
 
-  let best: RawSearchItem | null = null;
-  let bestScore = -Infinity;
-  for (const item of items) {
-    if (!item.id?.videoId) continue;
-    const channel = item.snippet?.channelTitle ?? "";
-    const videoTitle = item.snippet?.title ?? "";
+  // 打分排序,取前 8 名进入可嵌入核实
+  const ranked = (data.items ?? [])
+    .filter((it) => it.id?.videoId)
+    .map((it) => ({ it, score: scoreItem(it, queryTokens) }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 8);
+  if (ranked.length === 0) return [];
 
-    // query 的词有多少落在「视频标题 + 频道名」里 —— 基础匹配度
-    let score = coverage(queryTokens, tokenize(`${videoTitle} ${channel}`));
-    // 「歌手 - Topic」官方音频频道 —— 最优
-    if (/-\s*topic$/i.test(channel)) score += 1.5;
-    else if (/\bofficial\b/i.test(channel)) score += 0.4;
-    // 翻唱 / 现场 / 综艺等噪音 —— 扣分
-    if (JUNK_RE.test(videoTitle)) score -= 1.5;
+  const embeddable = await fetchEmbeddableSet(
+    ranked.map((r) => r.it.id!.videoId!),
+    key,
+  );
 
-    if (score > bestScore) {
-      bestScore = score;
-      best = item;
+  const candidates: YouTubeCandidate[] = [];
+  for (const { it } of ranked) {
+    const videoId = it.id!.videoId!;
+    // 核实成功时只留可嵌入的;核实失败(空集)则不过滤
+    if (embeddable.size > 0 && !embeddable.has(videoId)) continue;
+    candidates.push({ videoId, thumbnailUrl: thumbnailOf(it) });
+    if (candidates.length >= 5) break;
+  }
+  // 万一全被过滤掉,退回打分前几名,至少给出候选
+  if (candidates.length === 0) {
+    for (const { it } of ranked.slice(0, 5)) {
+      candidates.push({
+        videoId: it.id!.videoId!,
+        thumbnailUrl: thumbnailOf(it),
+      });
     }
   }
-
-  if (!best?.id?.videoId) return null;
-
-  const thumbs = best.snippet?.thumbnails;
-  return {
-    videoId: best.id.videoId,
-    thumbnailUrl:
-      thumbs?.high?.url ?? thumbs?.medium?.url ?? thumbs?.default?.url ?? "",
-  };
+  return candidates;
 }

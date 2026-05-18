@@ -1,5 +1,5 @@
 /*
- * /login —— Spotify 登录入口。阶段 0 为占位骨架（按钮无真实 OAuth）。
+ * /login —— Spotify 登录入口。按钮直达 PKCE OAuth 路由。
  */
 
 import { Disc3 } from "lucide-react";
@@ -18,15 +18,15 @@ export default function LoginPage() {
         once — your moods do the rest.
       </p>
 
-      <button
-        type="button"
+      <a
+        href="/api/auth/spotify/login"
         className="mt-10 flex items-center gap-3 rounded-full border border-mt-strong px-8 py-3.5 text-mt-fg transition-colors duration-200 hover:bg-mt-fg hover:text-mt-bg"
       >
         <Disc3 className="size-5" strokeWidth={1.6} />
         <span className="text-[11px] font-medium uppercase tracking-[0.2em]">
           Connect Spotify
         </span>
-      </button>
+      </a>
 
       <p className="mt-6 text-[10px] uppercase tracking-[0.15em] text-mt-faint">
         We never post on your behalf
