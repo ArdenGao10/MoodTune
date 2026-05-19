@@ -1,16 +1,20 @@
 "use client";
 
 /*
- * /recommendations —— 推荐结果页。
+ * /recommendations —— 推荐结果页（主页面：黑胶播放器形态）。
  *  loading：唱片加速旋转 + "Picking your songs..."
  *  done：主播放区显示 recommendations[activeIndex]，下方卡片为其余推荐，点击切换
  *  error：友好错误文案 + 重试
  *  idle：直接进入（无会话）→ 引导回首页
+ *
+ * 这里仍是「在站内播放」的体验；想跨平台发现 / 30s 试听 / 跳转，见 /discover
+ * （页面上有跳转入口）。
  */
 
-import { type ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import Link from "next/link";
 import {
+  ArrowRight,
   Pause,
   Play,
   Repeat,
@@ -151,6 +155,24 @@ function RecCard({
   );
 }
 
+/* ---------- 跨平台发现入口 ---------- */
+function DiscoverLink() {
+  return (
+    <div className="mt-[60px] flex justify-center">
+      <Link
+        href="/discover"
+        className="group flex items-center gap-2.5 rounded-full border border-mt-stroke px-5 py-3 text-[12px] text-mt-muted transition-colors hover:border-mt-strong hover:text-mt-fg"
+      >
+        <span>
+          Can&apos;t play here? Open all 3 as a list — 30s preview &amp;
+          cross-platform links
+        </span>
+        <ArrowRight className="size-4 shrink-0 transition-transform group-hover:translate-x-0.5" />
+      </Link>
+    </div>
+  );
+}
+
 /* ---------- 主播放区 + 卡片列表 ---------- */
 function PlayerView({
   recommendations,
@@ -265,14 +287,18 @@ function PlayerView({
           )}
           {status === "error" && (
             <p className="mt-3 text-center text-[12px] text-mt-muted">
-              Couldn&apos;t find this one to stream — skip to the next.
+              Couldn&apos;t find this one to stream — try it on another app
+              from the list below.
             </p>
           )}
         </div>
       </section>
 
+      {/* 跨平台发现入口 */}
+      <DiscoverLink />
+
       {/* 其余推荐 */}
-      <div className="mt-[70px] border-t border-dashed border-mt-stroke pt-10">
+      <div className="mt-[40px] border-t border-dashed border-mt-stroke pt-10">
         <p className="mb-5 text-[10px] uppercase tracking-[0.25em] text-mt-muted">
           Up next — tap to play
         </p>
@@ -294,6 +320,11 @@ function PlayerView({
 export default function RecommendationsPage() {
   const { status, recommendations, activeIndex, error, setActiveIndex, retry } =
     useMoodSession();
+
+  // 进入本页时回到顶部 —— 跳转过来时不要停在唱片中间的位置
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
 
   if (status === "loading") return <LoadingView />;
   if (status === "error") {

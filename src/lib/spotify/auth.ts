@@ -18,7 +18,12 @@ import { cookies } from "next/headers";
 
 const ACCOUNTS = "https://accounts.spotify.com";
 
-/** 申请的权限范围 —— streaming 为下一阶段的 Web Playback SDK 预留 */
+/**
+ * 申请的权限范围。
+ *  - streaming                Web Playback SDK 全曲播放（Premium 增强）
+ *  - user-library-modify      把歌加进用户的「我喜欢」（Add to Library）
+ * 注意：新增 scope 后，老用户需重新登录一次才会授予新权限。
+ */
 export const SPOTIFY_SCOPES = [
   "streaming",
   "user-read-email",
@@ -26,6 +31,7 @@ export const SPOTIFY_SCOPES = [
   "user-read-playback-state",
   "user-modify-playback-state",
   "user-read-currently-playing",
+  "user-library-modify",
 ].join(" ");
 
 /** cookie 名集中管理，避免散落字符串 */
@@ -270,4 +276,49 @@ export async function getCurrentToken(): Promise<string | null> {
 export async function invalidateAccessToken(): Promise<void> {
   const store = await cookies();
   store.delete(SP_COOKIE.access);
+}
+
+/* ---------- App token（Client Credentials）---------- */
+
+// App token 不绑定用户，进程内缓存即可（带 60s 安全余量）
+let appTokenCache: { token: string; expiresAt: number } | null = null;
+
+/**
+ * 取 Client Credentials 流程的 app token —— 用于「未登录也能搜歌 / 取封面
+ * / 取 30s preview」的公开场景（不涉及用户数据）。
+ * 需要 SPOTIFY_CLIENT_ID + SPOTIFY_CLIENT_SECRET；未配置时抛错，调用方降级。
+ */
+export async function getAppToken(): Promise<string> {
+  if (appTokenCache && appTokenCache.expiresAt > Date.now()) {
+    return appTokenCache.token;
+  }
+  const id = process.env.SPOTIFY_CLIENT_ID;
+  const secret = process.env.SPOTIFY_CLIENT_SECRET;
+  if (!id || !secret) {
+    throw new Error("SPOTIFY_CLIENT_ID / SPOTIFY_CLIENT_SECRET not set");
+  }
+  const basic = Buffer.from(`${id}:${secret}`).toString("base64");
+  const res = await fetch(`${ACCOUNTS}/api/token`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      Authorization: `Basic ${basic}`,
+    },
+    body: new URLSearchParams({ grant_type: "client_credentials" }),
+  });
+  if (!res.ok) {
+    const detail = await res.text().catch(() => "");
+    throw new Error(`Spotify app token ${res.status}: ${detail}`);
+  }
+  const data = (await res.json()) as SpotifyTokenResponse;
+  appTokenCache = {
+    token: data.access_token,
+    expiresAt: Date.now() + (data.expires_in - 60) * 1000,
+  };
+  return data.access_token;
+}
+
+/** 作废 app token 缓存 —— app token 提前失效（如 401）时强制下次重取 */
+export function invalidateAppToken(): void {
+  appTokenCache = null;
 }

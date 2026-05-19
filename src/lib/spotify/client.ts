@@ -4,7 +4,12 @@
  * 从 httpOnly cookie 取 token。收到 401 时自动作废 access cookie 并重试一次。
  */
 
-import { getCurrentToken, invalidateAccessToken } from "./auth";
+import {
+  getAppToken,
+  getCurrentToken,
+  invalidateAccessToken,
+  invalidateAppToken,
+} from "./auth";
 import type { SpotifyTrack, SpotifyUser } from "./types";
 
 const API_BASE = "https://api.spotify.com/v1";
@@ -19,11 +24,21 @@ export class SpotifyAuthError extends Error {
 
 /* ---------- 底层请求 ---------- */
 
+/**
+ * @param allowAppToken 未登录时是否回落到 Client Credentials app token。
+ *   仅用于公开数据（搜歌 / 封面 / preview）；涉及用户数据的端点必须 false。
+ */
 async function spotifyFetch(
   path: string,
   init?: RequestInit,
+  allowAppToken = false,
 ): Promise<Response> {
   let token = await getCurrentToken();
+  let usingApp = false;
+  if (!token && allowAppToken) {
+    token = await getAppToken();
+    usingApp = true;
+  }
   if (!token) throw new SpotifyAuthError();
 
   const call = (t: string) =>
@@ -36,16 +51,25 @@ async function spotifyFetch(
 
   // token 在请求间隙刚好失效 —— 强制刷新后重试一次
   if (res.status === 401) {
-    await invalidateAccessToken();
-    token = await getCurrentToken();
-    if (!token) throw new SpotifyAuthError();
+    if (usingApp) {
+      invalidateAppToken();
+      token = await getAppToken();
+    } else {
+      await invalidateAccessToken();
+      token = await getCurrentToken();
+      if (!token) throw new SpotifyAuthError();
+    }
     res = await call(token);
   }
   return res;
 }
 
-async function spotifyJson<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await spotifyFetch(path, init);
+async function spotifyJson<T>(
+  path: string,
+  init?: RequestInit,
+  allowAppToken = false,
+): Promise<T> {
+  const res = await spotifyFetch(path, init, allowAppToken);
   if (!res.ok) {
     const detail = await res.text().catch(() => "");
     throw new Error(`Spotify API ${res.status} ${path}: ${detail}`);
@@ -145,8 +169,11 @@ export async function searchTrack(query: string): Promise<SpotifyTrack | null> {
   const q = query.trim();
   if (!q) return null;
 
+  // allowAppToken：未登录用户也能搜歌取封面 —— 这是「发现层」的公开能力
   const data = await spotifyJson<{ tracks?: { items?: RawTrack[] } }>(
     `/search?type=track&limit=10&q=${encodeURIComponent(q)}`,
+    undefined,
+    true,
   );
   const items = data.tracks?.items ?? [];
   if (items.length === 0) return null;
@@ -215,6 +242,22 @@ export async function resumePlayback(deviceId: string): Promise<void> {
     { method: "PUT" },
   );
   assertPlaybackOk(res, "resume");
+}
+
+/* ---------- 用户曲库 ---------- */
+
+/**
+ * 把若干首歌加进当前用户的「我喜欢」—— PUT /me/tracks。
+ * 需要 user-library-modify scope（见 SPOTIFY_SCOPES）。
+ */
+export async function addTracksToLibrary(trackIds: string[]): Promise<void> {
+  const ids = trackIds.filter(Boolean);
+  if (ids.length === 0) return;
+  const res = await spotifyFetch(
+    `/me/tracks?ids=${ids.map(encodeURIComponent).join(",")}`,
+    { method: "PUT" },
+  );
+  assertPlaybackOk(res, "save tracks");
 }
 
 /* ---------- 当前用户 ---------- */

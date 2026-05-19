@@ -12,8 +12,8 @@ import { NextResponse } from "next/server";
 import type OpenAI from "openai";
 import { MODELS, parseJsonRobust, zhipu } from "@/lib/zhipu";
 import { DJ_SYSTEM_PROMPT, buildUserText } from "@/lib/dj-prompt";
-import { getCurrentToken } from "@/lib/spotify/auth";
 import { matchRecommendationsToTracks } from "@/lib/spotify/match";
+import { recommendationsToTracks } from "@/lib/track";
 import type {
   Recommendation,
   RecommendRequest,
@@ -88,16 +88,14 @@ export async function POST(
       recommendations = await callZhipu();
     }
 
-    // 已登录 → 匹配 Spotify，附带统一 Track[]（Real Mode）
-    let tracks: Track[] | undefined;
+    // 永远匹配 Spotify（用 app token，无需登录）→ 附带统一 Track[]。
+    // 匹配失败不影响主流程 —— 用纯推荐兜底，每首歌仍是「可发现的」。
+    let tracks: Track[];
     try {
-      const token = await getCurrentToken();
-      if (token) {
-        tracks = await matchRecommendationsToTracks(recommendations);
-      }
+      tracks = await matchRecommendationsToTracks(recommendations);
     } catch (matchError) {
-      // 匹配失败不影响主流程 —— 仍返回原始 recommendations
       console.warn("recommend: spotify matching failed", matchError);
+      tracks = recommendationsToTracks(recommendations);
     }
 
     return NextResponse.json({ recommendations, tracks });

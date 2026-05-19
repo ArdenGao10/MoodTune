@@ -1,25 +1,13 @@
 /*
  * GLM 推荐 → 统一 Track 的匹配管线。
  * 对每条 GLM 推荐尝试在 Spotify 搜歌：
- *  - 匹配成功 → source: 'spotify'（带 spotifyUri / previewUrl）
- *  - 匹配失败 → source: 'unplayable'（带三个外部搜索链接）
+ *  - 匹配成功 → source: 'spotify'（带 spotifyId / spotifyUri / 封面 / preview）
+ *  - 匹配失败 → source: 'recommendation'（仍可走跨平台搜索跳转去发现）
+ * 关键：匹配失败不再产生「死路径」—— 每首歌永远是「可发现的」。
  */
 
 import type { Recommendation, Track } from "@/lib/types";
 import { searchTrack } from "./client";
-
-/** 给 unplayable 歌曲生成三个外部平台的搜索链接 */
-export function buildExternalSearchUrls(
-  title: string,
-  artist: string,
-): NonNullable<Track["externalSearchUrls"]> {
-  const q = encodeURIComponent(`${title} ${artist}`.trim());
-  return {
-    youtubeMusic: `https://music.youtube.com/search?q=${q}`,
-    appleMusic: `https://music.apple.com/cn/search?term=${q}`,
-    spotifySearch: `https://open.spotify.com/search/${q}`,
-  };
-}
 
 /** 由 title + artist 生成稳定的内部 ID */
 function internalId(title: string, artist: string): string {
@@ -35,7 +23,7 @@ async function recommendationToTrack(rec: Recommendation): Promise<Track> {
   try {
     spotify = await searchTrack(`${rec.title} ${rec.artist}`);
   } catch (error) {
-    // 单首匹配失败不应拖垮整组 —— 降级为 unplayable
+    // 单首匹配失败不应拖垮整组 —— 降级为 recommendation
     console.warn("spotify match failed for", rec.title, error);
   }
 
@@ -44,21 +32,25 @@ async function recommendationToTrack(rec: Recommendation): Promise<Track> {
       id: spotify.id,
       title: spotify.name,
       artist: spotify.artists.map((a) => a.name).join(", "),
+      album: spotify.album.name,
       albumArt: spotify.album.images[0]?.url ?? null,
+      moodTag: rec.moodTag,
       source: "spotify",
+      spotifyId: spotify.id,
       spotifyUri: spotify.uri,
       previewUrl: spotify.preview_url ?? undefined,
       djNote: rec.note,
     };
   }
 
+  // 没匹配上 —— 仍是一首「可发现」的歌，靠跨平台跳转
   return {
     id: internalId(rec.title, rec.artist),
     title: rec.title,
     artist: rec.artist,
     albumArt: null,
-    source: "unplayable",
-    externalSearchUrls: buildExternalSearchUrls(rec.title, rec.artist),
+    moodTag: rec.moodTag,
+    source: "recommendation",
     djNote: rec.note,
   };
 }

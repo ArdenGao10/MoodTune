@@ -17,11 +17,13 @@ import {
 } from "react";
 import { useWeather } from "./weather-provider";
 import { saveSession } from "@/lib/history";
+import { recommendationsToTracks } from "@/lib/track";
 import type {
   MoodInput,
   Recommendation,
   RecommendRequest,
   RecommendResponse,
+  Track,
 } from "@/lib/types";
 
 export type SessionStatus = "idle" | "loading" | "done" | "error";
@@ -29,6 +31,8 @@ export type SessionStatus = "idle" | "loading" | "done" | "error";
 interface MoodSessionContextValue {
   status: SessionStatus;
   recommendations: Recommendation[];
+  /** 统一歌曲模型 —— 发现卡片渲染的数据源（含 Spotify 匹配结果） */
+  tracks: Track[];
   activeIndex: number;
   error: string | null;
   startRecommendation: (input: MoodInput) => void;
@@ -50,6 +54,7 @@ export function MoodSessionProvider({ children }: { children: ReactNode }) {
   const { weather } = useWeather();
   const [status, setStatus] = useState<SessionStatus>("idle");
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const [tracks, setTracks] = useState<Track[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const lastInput = useRef<MoodInput | null>(null);
@@ -60,6 +65,7 @@ export function MoodSessionProvider({ children }: { children: ReactNode }) {
       setStatus("loading");
       setError(null);
       setRecommendations([]);
+      setTracks([]);
       setActiveIndex(0);
 
       const body: RecommendRequest = {
@@ -81,6 +87,12 @@ export function MoodSessionProvider({ children }: { children: ReactNode }) {
             throw new Error(data.error ?? "The DJ needs a moment. Try again?");
           }
           setRecommendations(data.recommendations);
+          // 服务端已匹配 Spotify → 直接用；缺失时用纯推荐兜底
+          setTracks(
+            data.tracks?.length
+              ? data.tracks
+              : recommendationsToTracks(data.recommendations),
+          );
           setActiveIndex(0);
           setStatus("done");
           // 成功一次推荐 → 存进收听历史(localStorage)
@@ -107,6 +119,7 @@ export function MoodSessionProvider({ children }: { children: ReactNode }) {
       value={{
         status,
         recommendations,
+        tracks,
         activeIndex,
         error,
         startRecommendation,

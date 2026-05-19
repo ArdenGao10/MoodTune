@@ -40,32 +40,44 @@ export interface Recommendation {
 }
 
 /**
- * 应用内部统一的歌曲模型 —— 跨三种数据来源：
- *  - 'mock'       Demo Mode 的预设歌曲
- *  - 'spotify'    GLM 推荐已成功匹配到 Spotify
- *  - 'unplayable' GLM 推荐在 Spotify 没找到，只能给外部搜索链接
- * 上层 UI 只认这个类型，不关心数据从哪来。
+ * 应用内部统一的歌曲模型 —— MoodTune 是「音乐发现层」，每首歌都是
+ * 「可发现的」，区别只在播放路径：
+ *  - 'mock'           Demo Mode 的预设歌曲
+ *  - 'spotify'        GLM 推荐已成功匹配到 Spotify（带封面 / preview / 直达链接）
+ *  - 'recommendation' GLM 推荐未匹配到 Spotify —— 仍可通过跨平台搜索跳转发现
+ * 上层 UI 只认这个类型，不关心数据从哪来。任何一首歌都不会出现死路径。
  */
+export type TrackSource = "mock" | "spotify" | "recommendation";
+
 export interface Track {
   /** 内部 ID */
   id: string;
   title: string;
   artist: string;
+  /** 专辑名（Spotify 匹配成功时存在） */
+  album?: string;
   /** 专辑封面 URL；为 null 时 UI 用 <BrandCover /> SVG 占位 */
   albumArt: string | null;
-  source: "mock" | "spotify" | "unplayable";
-  /** source 为 'spotify' 时存在 —— 用于 Web Playback SDK */
+  /** 情绪标签 —— 来自 GLM 推荐 */
+  moodTag?: string;
+  source: TrackSource;
+  /** Spotify 匹配成功时存在 —— 用于直达链接 */
+  spotifyId?: string;
+  /** Spotify 匹配成功时存在 —— 用于 Web Playback SDK 全曲播放 */
   spotifyUri?: string;
-  /** 30 秒试听片段，可能不存在 */
+  /** 30 秒试听片段（Spotify public endpoint），可能不存在 */
   previewUrl?: string;
-  /** source 为 'unplayable' 时存在 —— 三个外部平台的搜索链接 */
-  externalSearchUrls?: {
-    youtubeMusic: string;
-    appleMusic: string;
-    spotifySearch: string;
-  };
   /** DJ 的推荐语 */
   djNote: string;
+}
+
+/** 用户对单首歌的反馈 —— 暂存 localStorage */
+export type FeedbackKind = "love" | "meh" | "skip";
+
+export interface FeedbackEntry {
+  trackId: string;
+  feedback: FeedbackKind;
+  timestamp: number;
 }
 
 /** /api/recommend 的响应体 */

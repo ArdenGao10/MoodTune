@@ -63,8 +63,8 @@ export default function HomePage() {
           {...fadeUp(0.15)}
           className="mt-9 max-w-[460px] text-[17px] leading-[1.6] text-mt-muted"
         >
-          An AI DJ that picks songs for your every weather, every feeling,
-          every late night. — Curated for those who outgrew Top 50.
+          An AI DJ that introduces you to your next favorite song —
+          wherever you listen.
         </motion.p>
 
         <motion.p
@@ -98,7 +98,8 @@ export default function HomePage() {
             {...fadeUp(0.15)}
             className="mt-5 max-w-[330px] text-[14px] leading-[1.55] text-mt-muted"
           >
-            An AI DJ for your every weather, every feeling, every late night.
+            An AI DJ that introduces you to your next favorite song —
+            wherever you listen.
           </motion.p>
 
           <motion.p
