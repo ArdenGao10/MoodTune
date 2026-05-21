@@ -108,6 +108,7 @@ src/
   npm run lint
   ```
 
-## 许可
+## License
+MIT © [ArdenGao10](https://github.com/ArdenGao10)
 
-仅供学习与个人使用。
+本项目代码仅供学习交流使用，**禁止未经许可用于商业用途**。
