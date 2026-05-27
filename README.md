@@ -1,114 +1,91 @@
 # MoodTune
 
-> 把当下的心情翻译成一张唱片 —— 一个面向「音乐发现」的 AI 推荐层。
+![MoodTune home](public/screenshots/home.png)
 
-MoodTune 不是又一个流媒体播放器,而是叠在 Spotify / YouTube 之上的一层「DJ」:你描述心情、场景或天气,它从海量曲库里挑出最贴合此刻的几首歌,并用唱片化的视觉语言把推荐过程演成一段小仪式。
+> Translate tonight's mood into a record — an AI music-discovery layer that sits on top of the catalogs you already use.
 
-## 主要特性
+## Why MoodTune doesn't play music itself
 
-- **心情输入**:支持文字、表情标签、图片三种方式描述当前氛围。
-- **AI 推荐引擎**:接入智谱 GLM(OpenAI 兼容协议),基于心情、位置、天气与历史偏好生成歌单。
-- **多源播放**:登录 Spotify 后可直接全曲播放;未登录则回退到 30 秒预览或 YouTube 解析播放。
-- **环境感知**:顶栏集成 OpenWeatherMap 实时天气,作为推荐输入维度之一。
-- **听歌足迹**:本地保存推荐历史与回顾(Recap),支持时间线浏览。
-- **手绘视觉**:基于 roughjs + Framer Motion 的唱片 / 波形动画,深浅主题自动切换。
+MoodTune isn't a streaming service. It deliberately doesn't host audio, run a catalog, or sign licensing deals — and that's the point.
 
-## 技术栈
+Streaming is a solved (and brutally expensive) problem. The part that *isn't* solved is curation that actually reads how you feel right now, rather than scoring engagement against a feature vector. So MoodTune leans on Spotify and YouTube for playback and spends its energy on a single thing: a small AI DJ that listens to your mood, the weather, and what you wrote — and presses three songs into one record for tonight.
 
-- **框架**:Next.js 16(App Router)+ React 19 + TypeScript 5
-- **样式**:Tailwind CSS v4 + Radix UI + shadcn
-- **动效**:Framer Motion、roughjs
-- **AI**:智谱 GLM(通过 `openai` SDK 调用 OpenAI 兼容端点)
-- **数据源**:Spotify Web API、YouTube Data API v3、OpenWeatherMap
+A few consequences of that decision:
 
-## 快速开始
+- **No DRM, no licensing, no catalog plumbing.** Playback is delegated. Discovery stays in our hands.
+- **Multi-source by default.** Signed in to Spotify → full-track playback. Otherwise → 30-second previews or a YouTube fallback. The recommendation never depends on what you happen to be subscribed to.
+- **The interesting surface is the curation.** Three songs, hand-picked by GLM for this exact moment, framed as a record-sleeve ritual — not a 50-track playlist you'll never finish.
 
-### 1. 环境要求
+## Features
+
+- **Mood input** — describe the vibe via text, emoji tags, an inner-weather picker, or a photo of right now.
+- **AI DJ** — Zhipu GLM (OpenAI-compatible) reads the mood, the local weather, and your listening history, and returns three songs. No padding.
+- **Multi-source playback** — Spotify for full tracks when signed in; 30-second previews or YouTube resolution otherwise.
+- **Ambient awareness** — the top bar shows live OpenWeatherMap conditions and feeds them into the recommendation.
+- **Mood calendar & recap** — every logged night is pressed into a calendar tile; the monthly recap mixes a whole month onto one side.
+- **Hand-drawn visuals** — record and waveform animations built with roughjs + Framer Motion, with light/dark theme switching.
+
+## Tech Stack
+
+- **Framework**: Next.js 16 (App Router) + React 19 + TypeScript 5
+- **Styling**: Tailwind CSS v4 + Radix UI + shadcn
+- **Animation**: Framer Motion, roughjs
+- **AI**: Zhipu GLM via the `openai` SDK against the OpenAI-compatible endpoint
+- **Data sources**: Spotify Web API, YouTube Data API v3, OpenWeatherMap
+- **Hosting**: Vercel
+
+## Local Development
+
+### 1. Requirements
 
 - Node.js ≥ 20
-- npm / pnpm / yarn 任选其一
-- 访问外部 API 的网络代理(国内环境推荐)
+- npm / pnpm / yarn
+- A network proxy for external APIs (recommended inside mainland China)
 
-### 2. 安装依赖
+### 2. Install
 
 ```bash
 npm install
 ```
 
-### 3. 配置环境变量
-
-复制示例文件并填入密钥:
+### 3. Configure environment variables
 
 ```bash
 cp .env.example .env.local
 ```
 
-需要申请的密钥:
-
-| 变量 | 用途 | 申请地址 |
+| Variable | Purpose | Where to get it |
 | --- | --- | --- |
-| `ZHIPUAI_API_KEY` | 推荐引擎 | https://open.bigmodel.cn |
-| `OPENWEATHER_API_KEY` | 顶栏天气 | https://openweathermap.org/api |
-| `SPOTIFY_CLIENT_ID` / `SPOTIFY_CLIENT_SECRET` | 登录与全曲播放 | https://developer.spotify.com/dashboard |
-| `SPOTIFY_REDIRECT_URI` | OAuth 回调,需与 Dashboard 完全一致 | 默认 `http://127.0.0.1:3000/api/auth/spotify/callback` |
-| `YOUTUBE_API_KEY` | 把「歌名 + 歌手」解析为可播放视频 | https://console.cloud.google.com |
+| `ZHIPUAI_API_KEY` | Recommendation engine | https://open.bigmodel.cn |
+| `OPENWEATHER_API_KEY` | Top-bar weather | https://openweathermap.org/api |
+| `SPOTIFY_CLIENT_ID` / `SPOTIFY_CLIENT_SECRET` | Login + full-track playback | https://developer.spotify.com/dashboard |
+| `SPOTIFY_REDIRECT_URI` | OAuth callback (must match Dashboard exactly) | Defaults to `http://127.0.0.1:3000/api/auth/spotify/callback` |
+| `YOUTUBE_API_KEY` | Resolve "track + artist" into a playable video | https://console.cloud.google.com |
 
-> Spotify 已不再允许 `localhost`,本地开发请统一使用 `127.0.0.1`。
+> Spotify no longer accepts `localhost`. Use `127.0.0.1` for local development.
 
-### 4. 启动开发服务器
-
-```bash
-npm run dev
-```
-
-默认监听 `http://127.0.0.1:3000`。`dev` 脚本里内置了 HTTP/HTTPS 代理变量(`127.0.0.1:7897`),如不需要请按需修改 [package.json](package.json)。
-
-### 5. 生产构建
+### 4. Run
 
 ```bash
+npm run dev      # http://127.0.0.1:3000
 npm run build
 npm run start
+npm run lint
 ```
 
-## 目录结构
+The `dev` script ships with `HTTP_PROXY` / `HTTPS_PROXY` baked in (`127.0.0.1:7897`); adjust [package.json](package.json) if you don't need them.
 
-```
-src/
-├── app/                  # Next.js App Router
-│   ├── api/              # 服务端路由:推荐 / 天气 / 地理编码 / Spotify / YouTube
-│   ├── mood-input/       # 心情输入页
-│   ├── recommendations/  # 推荐结果页
-│   ├── discover/         # 发现 / 浏览
-│   ├── history/          # 听歌历史
-│   ├── recap/            # 周期回顾
-│   └── login/            # Spotify 登录入口
-├── components/           # UI 组件(唱片、波形、卡片等)
-├── contexts/             # 全局 Context:播放、音源、预览
-└── lib/                  # 业务逻辑:智谱客户端、Spotify/YouTube 适配、历史持久化
-```
+## Credits
 
-## 主要页面路径
-
-| 路径 | 说明 |
-| --- | --- |
-| `/` | 封面 |
-| `/mood-input` | 心情输入(文字 / 标签 / 图片) |
-| `/recommendations` | 推荐结果与播放 |
-| `/discover` | 发现页 |
-| `/history` | 历史记录 |
-| `/recap` | 听歌回顾 |
-| `/login` | Spotify 授权 |
-
-## 开发约定
-
-- 项目使用的是当前版本的 Next.js,API、约定与文件结构可能与历史版本不同,改动前请参考 [AGENTS.md](AGENTS.md) 与 `node_modules/next/dist/docs/`。
-- ESLint 配置见 [eslint.config.mjs](eslint.config.mjs),提交前请运行:
-
-  ```bash
-  npm run lint
-  ```
+- Recommendation engine: [Zhipu AI](https://open.bigmodel.cn) (GLM-5.1 for text, GLM-4.5v for images)
+- Playback: [Spotify Web API](https://developer.spotify.com) · [YouTube Data API](https://developers.google.com/youtube/v3)
+- Weather: [OpenWeatherMap](https://openweathermap.org)
+- Hand-drawn rendering: [roughjs](https://roughjs.com)
+- Motion: [Framer Motion](https://www.framer.com/motion/)
+- UI primitives: [Radix UI](https://www.radix-ui.com) · [shadcn/ui](https://ui.shadcn.com)
 
 ## License
+
 MIT © [ArdenGao10](https://github.com/ArdenGao10)
 
-本项目代码仅供学习交流使用，**禁止未经许可用于商业用途**。
+This code is provided for study and reference only. **Commercial use without permission is prohibited.**
