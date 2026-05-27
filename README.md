@@ -1,6 +1,6 @@
 # MoodTune
 
-![MoodTune home]([public/screenshots/home.png](https://github.com/user-attachments/assets/f2141573-334c-4196-bc68-4be286d778e9))
+![MoodTune home](https://github.com/user-attachments/assets/f2141573-334c-4196-bc68-4be286d778e9)
 
 > Tell it how you feel tonight. An AI DJ picks three songs, plays them in-app, and hands you a one-tap jump to whichever music app you actually use.
 
