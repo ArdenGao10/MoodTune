@@ -2,26 +2,25 @@
 
 ![MoodTune home](public/screenshots/home.png)
 
-> Translate tonight's mood into a record — an AI music-discovery layer that sits on top of the catalogs you already use.
+> Tell it how you feel tonight. An AI DJ picks three songs, plays them in-app, and hands you a one-tap jump to whichever music app you actually use.
 
-## Why MoodTune doesn't play music itself
+## What it is
 
-MoodTune isn't a streaming service. It deliberately doesn't host audio, run a catalog, or sign licensing deals — and that's the point.
+MoodTune is a small, hand-drawn music room with two things bolted together:
 
-Streaming is a solved (and brutally expensive) problem. The part that *isn't* solved is curation that actually reads how you feel right now, rather than scoring engagement against a feature vector. So MoodTune leans on Spotify and YouTube for playback and spends its energy on a single thing: a small AI DJ that listens to your mood, the weather, and what you wrote — and presses three songs into one record for tonight.
+1. **An AI DJ that reads the room.** Zhipu GLM takes your mood input — tags, a free-text note, an inner-weather vibe, even a photo of what's in front of you — folds in local weather and your recent history, and returns three songs framed as tonight's "record." Not a 50-track playlist. Three.
+2. **A player that just works, plus an escape hatch to your own apps.** Each track resolves through YouTube and plays inside MoodTune (vinyl spin, waveform progress, prev/next, seek). If you'd rather hear it on Spotify, Apple Music, YouTube Music, NetEase, or QQ Music, every song has a one-tap deep link to that platform — opening the matched track when we can, falling back to a search when we can't.
 
-A few consequences of that decision:
-
-- **No DRM, no licensing, no catalog plumbing.** Playback is delegated. Discovery stays in our hands.
-- **Multi-source by default.** Signed in to Spotify → full-track playback. Otherwise → 30-second previews or a YouTube fallback. The recommendation never depends on what you happen to be subscribed to.
-- **The interesting surface is the curation.** Three songs, hand-picked by GLM for this exact moment, framed as a record-sleeve ritual — not a 50-track playlist you'll never finish.
+Sign in with Spotify and two extra things light up: recommendations get matched against the Spotify catalog (so the deep link goes straight to the track page), and you can save any song to your Liked Songs without leaving MoodTune.
 
 ## Features
 
-- **Mood input** — describe the vibe via text, emoji tags, an inner-weather picker, or a photo of right now.
-- **AI DJ** — Zhipu GLM (OpenAI-compatible) reads the mood, the local weather, and your listening history, and returns three songs. No padding.
-- **Multi-source playback** — Spotify for full tracks when signed in; 30-second previews or YouTube resolution otherwise.
-- **Ambient awareness** — the top bar shows live OpenWeatherMap conditions and feeds them into the recommendation.
+- **Multimodal mood input** — pick up to 3 emotion tags, write a sentence, choose a color + weather vibe, or drop a photo. Mix any of them.
+- **AI DJ** — Zhipu GLM (OpenAI-compatible API) reads the mood, the local weather, and your listening history, and returns three curated songs with a short DJ note for each.
+- **Built-in player** — YouTube-backed playback engine resolves each "title + artist" into a candidate list, plays the first one that works, and silently skips embed-blocked / region-locked results so "Couldn't find this one" is rare.
+- **Cross-platform jump** — one-tap links to Spotify · Apple Music · YouTube Music · NetEase · QQ Music. Deep-link to the matched track when possible, search fallback otherwise.
+- **Spotify integration (optional)** — log in to deep-link to the exact Spotify track and save songs to your Liked library.
+- **Ambient awareness** — the top bar shows live OpenWeatherMap conditions and feeds them into the recommendation prompt.
 - **Mood calendar & recap** — every logged night is pressed into a calendar tile; the monthly recap mixes a whole month onto one side.
 - **Hand-drawn visuals** — record and waveform animations built with roughjs + Framer Motion, with light/dark theme switching.
 
