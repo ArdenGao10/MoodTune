@@ -23,7 +23,7 @@ import {
 import { Vinyl } from "@/components/vinyl";
 import { RoughButton } from "@/components/rough-button";
 import { WaveProgressBar } from "@/components/wave-progress-bar";
-import { PlatformJumpRow } from "@/components/platform-jump-row";
+import { PlatformJumpMenu } from "@/components/platform-jump-menu";
 import { useMoodSession } from "@/components/mood-session-provider";
 import { usePlayback } from "@/contexts/PlaybackContext";
 import type { Recommendation } from "@/lib/types";
@@ -110,9 +110,9 @@ function IdleView() {
 }
 
 /* ---------- 推荐卡片 ----------
- * 用 <div role="button"> 而非 <button> —— 跨平台跳转图标是 <a>，HTML 不允许
- * interactive 后代出现在 <button> 内。键盘可达：Enter / Space 触发选中。
- * 跳转图标右侧悬浮：桌面端 hover 才显形（避免视觉干扰），移动端无 hover 故常显。
+ * 用 <div role="button"> 而非 <button> —— 跨平台跳转里的 <a> 不能嵌在 <button> 内。
+ * 键盘可达：Enter / Space 触发选中。
+ * 右上角 compact 跳转按钮，点击弹出 5 个平台；按钮本身已 stopPropagation。
  */
 function RecCard({
   rec,
@@ -134,7 +134,7 @@ function RecCard({
           onSelect();
         }
       }}
-      className="group relative flex w-full cursor-pointer items-start gap-4 rounded-xl border border-mt-stroke p-4 pr-12 text-left transition-colors hover:border-mt-strong focus:outline-none focus-visible:border-mt-strong"
+      className="group relative flex w-full cursor-pointer items-start gap-4 rounded-xl border border-mt-stroke p-4 pr-14 text-left transition-colors hover:border-mt-strong focus:outline-none focus-visible:border-mt-strong"
     >
       <span className="text-display shrink-0 text-[22px] text-mt-faint">
         {String(index + 1).padStart(2, "0")}
@@ -150,11 +150,12 @@ function RecCard({
           {rec.note}
         </p>
       </div>
-      <PlatformJumpRow
+      <PlatformJumpMenu
         title={rec.title}
         artist={rec.artist}
-        size={16}
-        className="absolute right-3 top-1/2 -translate-y-1/2 flex-col gap-2 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"
+        variant="compact"
+        align="end"
+        className="absolute right-3 top-3"
       />
     </div>
   );
@@ -266,16 +267,12 @@ function PlayerView({
             </ControlButton>
           </div>
 
-          {/* 跨平台跳转 —— 不能流播时这一行就是兜底 */}
-          <div className="mt-5 flex flex-col items-center gap-2">
-            <p className="text-[10px] uppercase tracking-[0.25em] text-mt-faint">
-              Open in
-            </p>
-            <PlatformJumpRow
+          {/* 跨平台跳转 —— 点开露出 5 个平台；不能流播时这就是兜底入口 */}
+          <div className="mt-5 flex justify-center">
+            <PlatformJumpMenu
               title={active.title}
               artist={active.artist}
-              size={22}
-              className="gap-3.5"
+              align="center"
             />
           </div>
 
@@ -287,7 +284,7 @@ function PlayerView({
           )}
           {status === "error" && (
             <p className="mt-3 text-center text-[12px] text-mt-muted">
-              Couldn&apos;t find this one to stream — open it on another app
+              Couldn&apos;t find this one to stream — try one of the platforms
               above.
             </p>
           )}

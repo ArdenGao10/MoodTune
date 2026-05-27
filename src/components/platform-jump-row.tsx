@@ -47,7 +47,7 @@ export function PlatformJumpRow({
           onClick={stop}
           aria-label={`Open in ${PLATFORM_LABELS[platform]}`}
           title={PLATFORM_LABELS[platform]}
-          className="opacity-70 transition-opacity hover:opacity-100"
+          className="opacity-85 transition-opacity hover:opacity-100"
         >
           <PlatformIcon platform={platform} size={size} />
         </a>

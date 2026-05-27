@@ -10,7 +10,7 @@ import { useMemo, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { PlatformJumpRow } from "@/components/platform-jump-row";
+import { PlatformJumpMenu } from "@/components/platform-jump-menu";
 import {
   getServerSessionsSnapshot,
   getSessionsSnapshot,
@@ -54,7 +54,7 @@ function SessionDetail({ session }: { session: MoodSessionRecord }) {
         {session.recommendations.map((rec, i) => (
           <div
             key={`${rec.title}-${i}`}
-            className="group relative rounded-xl border border-mt-stroke p-4 pr-12"
+            className="relative rounded-xl border border-mt-stroke p-4 pr-14"
           >
             <p className="truncate text-[14px] font-bold uppercase tracking-[-0.01em] text-mt-fg">
               {rec.title}
@@ -65,11 +65,12 @@ function SessionDetail({ session }: { session: MoodSessionRecord }) {
             <p className="mt-2 text-[12px] italic leading-snug text-mt-muted">
               {rec.note}
             </p>
-            <PlatformJumpRow
+            <PlatformJumpMenu
               title={rec.title}
               artist={rec.artist}
-              size={16}
-              className="absolute right-3 top-1/2 -translate-y-1/2 flex-col gap-2 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"
+              variant="compact"
+              align="end"
+              className="absolute right-3 top-3"
             />
           </div>
         ))}
