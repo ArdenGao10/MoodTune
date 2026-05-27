@@ -7,14 +7,12 @@
  *  error：友好错误文案 + 重试
  *  idle：直接进入（无会话）→ 引导回首页
  *
- * 这里仍是「在站内播放」的体验；想跨平台发现 / 30s 试听 / 跳转，见 /discover
- * （页面上有跳转入口）。
  */
 
 import { useEffect, type ReactNode } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
-  ArrowRight,
   Pause,
   Play,
   Repeat,
@@ -101,24 +99,13 @@ function ErrorView({
   );
 }
 
-/* ---------- idle (直接进入) ---------- */
+/* ---------- idle (直接进入) → 跳回首页 ---------- */
 function IdleView() {
-  return (
-    <section className="flex min-h-[70vh] flex-col items-center justify-center gap-6 py-16 text-center">
-      <p className="text-eyebrow text-mt-muted">No session yet</p>
-      <h1 className="text-display text-[44px] text-mt-fg md:text-[64px]">
-        Set your
-        <br />
-        mood first
-      </h1>
-      <Link
-        href="/"
-        className="text-eyebrow mt-2 text-mt-muted underline-offset-4 hover:text-mt-fg hover:underline"
-      >
-        Go to mood input
-      </Link>
-    </section>
-  );
+  const router = useRouter();
+  useEffect(() => {
+    router.replace("/");
+  }, [router]);
+  return null;
 }
 
 /* ---------- 推荐卡片 ---------- */
@@ -152,24 +139,6 @@ function RecCard({
         </span>
       </span>
     </button>
-  );
-}
-
-/* ---------- 跨平台发现入口 ---------- */
-function DiscoverLink() {
-  return (
-    <div className="mt-[60px] flex justify-center">
-      <Link
-        href="/discover"
-        className="group flex items-center gap-2.5 rounded-full border border-mt-stroke px-5 py-3 text-[12px] text-mt-muted transition-colors hover:border-mt-strong hover:text-mt-fg"
-      >
-        <span>
-          Can&apos;t play here? Open all 3 as a list — 30s preview &amp;
-          cross-platform links
-        </span>
-        <ArrowRight className="size-4 shrink-0 transition-transform group-hover:translate-x-0.5" />
-      </Link>
-    </div>
   );
 }
 
@@ -293,9 +262,6 @@ function PlayerView({
           )}
         </div>
       </section>
-
-      {/* 跨平台发现入口 */}
-      <DiscoverLink />
 
       {/* 其余推荐 */}
       <div className="mt-[40px] border-t border-dashed border-mt-stroke pt-10">
