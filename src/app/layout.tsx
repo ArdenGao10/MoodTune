@@ -44,6 +44,12 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head>
+        {/* 提前与 YouTube / YT API / 缩略图 CDN 完成 DNS + TLS 握手，
+            首曲播放时省掉 ~100-300ms 的连接建立时间 */}
+        <link rel="preconnect" href="https://www.youtube.com" />
+        <link rel="preconnect" href="https://s.ytimg.com" />
+        <link rel="preconnect" href="https://i.ytimg.com" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://www.googleapis.com" />
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body className="min-h-full">

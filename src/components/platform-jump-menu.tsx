@@ -20,7 +20,7 @@ import {
   useState,
   type MouseEvent as ReactMouseEvent,
 } from "react";
-import { ChevronDown, ExternalLink } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { PlatformJumpRow } from "@/components/platform-jump-row";
 import { cn } from "@/lib/utils";
 
@@ -92,7 +92,13 @@ export function PlatformJumpMenu({
         }
       >
         {variant === "compact" ? (
-          <ExternalLink className="size-3.5" strokeWidth={1.7} />
+          <ChevronDown
+            className={cn(
+              "size-4 transition-transform",
+              open && "rotate-180",
+            )}
+            strokeWidth={1.7}
+          />
         ) : (
           <>
             Open in

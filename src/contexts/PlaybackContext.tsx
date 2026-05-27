@@ -203,6 +203,23 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
     [resolveTrack, playCandidate],
   );
 
+  // 新一组推荐 → 预热引擎 + 并行预解析全部曲目。
+  // 预热:iframe API 脚本 + Player 实例化(~800-1500ms),与首曲的 /api/youtube/search
+  // 并行,显著缩短首播等待。
+  // 预解析:把全部曲目的候选预先打回缓存,用户切歌时省去整次网络往返(~500-800ms)。
+  // 用独立的 ref 标记「这组 recs 是否已预热过」—— 不依赖 prevRecsRef,避免与上面那个
+  // effect 形成时序耦合。
+  const prefetchedRecsRef = useRef<typeof recommendations | null>(null);
+  useEffect(() => {
+    if (prefetchedRecsRef.current === recommendations) return;
+    if (recommendations.length === 0) return;
+    prefetchedRecsRef.current = recommendations;
+    void getEngine().prepare();
+    for (const rec of recommendations) {
+      void resolveTrack(rec.title, rec.artist);
+    }
+  }, [recommendations, getEngine, resolveTrack]);
+
   // 活动曲目变化 → 重新解析(标题+歌手唯一确定一首)
   useEffect(() => {
     if (active) void loadActive(false);

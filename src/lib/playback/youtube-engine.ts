@@ -170,6 +170,13 @@ export class YouTubePlaybackEngine implements PlaybackEngine {
     }
   }
 
+  /** 预热：提前加载 iframe API 脚本 + 创建屏幕外 Player，
+   *  使首次播放时省掉这两步等待（~800-1500ms）。
+   *  可在进入推荐页时调用；多次调用幂等。 */
+  prepare(): Promise<void> {
+    return this.ensureReady();
+  }
+
   async cue(videoId: string): Promise<void> {
     await this.ensureReady();
     this.player!.cueVideoById(videoId);
